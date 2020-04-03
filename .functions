@@ -6,9 +6,9 @@ function mkd() {
 }
 
 # Change working directory to the top-most Finder window location
-function cdf() { # short for `cdfinder`
-	cd "$(osascript -e 'tell app "Finder" to POSIX path of (insertion location as alias)')";
-}
+#function cdf() { # short for `cdfinder`
+#	cd "$(osascript -e 'tell app "Finder" to POSIX path of (insertion location as alias)')";
+#}
 
 # Create a .tar.gz archive, using `zopfli`, `pigz` or `gzip` for compression
 function targz() {
@@ -139,6 +139,16 @@ function getcertnames() {
 		echo "ERROR: Certificate not found.";
 		return 1;
 	fi;
+}
+
+# `v` with no arguments opens the current directory in Vim, otherwise opens the
+# given location
+function v() {
+    if [ $# -eq 0 ]; then
+        vim .;
+    else
+        vim "$@";
+    fi;
 }
 
 # Normalize `open` across Linux, macOS, and Windows.
