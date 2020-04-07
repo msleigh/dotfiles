@@ -1,12 +1,26 @@
-" Use the Solarized Dark theme
+"" Use the Solarized Dark theme
 set background=dark
-colorscheme solarized
-let g:solarized_termtrans=1
-
+"let g:solarized_termtrans=1
+"
 " Make Vim more useful
 set nocompatible
-" Use the OS clipboard by default (on versions compiled with `+clipboard`)
-set clipboard=unnamed
+" Set the runtime path to include Vundle and initialize
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+
+" Let Vundle manage Vundle, required
+Plugin 'VundleVim/Vundle.vim'
+" Gruvbox theme
+Plugin 'morhetz/gruvbox'
+
+" All of your Plugins must be added before the following line
+call vundle#end()            " required
+filetype plugin indent on    " required
+
+colorscheme gruvbox
+
+"" Use the OS clipboard by default (on versions compiled with `+clipboard`)
+"set clipboard=unnamed
 " Enhance command-line completion
 set wildmenu
 " Allow cursor keys in insert mode
@@ -44,10 +58,14 @@ set secure
 set number
 " Enable syntax highlighting
 syntax on
-" Highlight current line
-set cursorline
+"" Highlight current line
+"set cursorline
 " Make tabs as wide as two spaces
 set tabstop=2
+" These settings prevent all hard tabs in indentation
+set expandtab
+set shiftwidth=2
+set softtabstop=2
 " Show “invisible” characters
 set lcs=tab:▸\ ,trail:·,eol:¬,nbsp:_
 set list
@@ -82,6 +100,8 @@ if exists("&relativenumber")
 endif
 " Start scrolling three lines before the horizontal window border
 set scrolloff=3
+" Set indentation
+set autoindent
 
 " Strip trailing whitespace (,ss)
 function! StripWhitespace()
@@ -92,15 +112,21 @@ function! StripWhitespace()
 	call setreg('/', old_query)
 endfunction
 noremap <leader>ss :call StripWhitespace()<CR>
-" Save a file as root (,W)
-noremap <leader>W :w !sudo tee % > /dev/null<CR>
+"" Save a file as root (,W)
+"noremap <leader>W :w !sudo tee % > /dev/null<CR>
 
 " Automatic commands
-if has("autocmd")
-	" Enable file type detection
-	filetype on
-	" Treat .json files as .js
-	autocmd BufNewFile,BufRead *.json setfiletype json syntax=javascript
-	" Treat .md files as Markdown
-	autocmd BufNewFile,BufRead *.md setlocal filetype=markdown
-endif
+"if has("autocmd")
+"	" Enable file type detection
+"	filetype on
+"	" Treat .json files as .js
+"	autocmd BufNewFile,BufRead *.json setfiletype json syntax=javascript
+"	" Treat .md files as Markdown
+"	autocmd BufNewFile,BufRead *.md setlocal filetype=markdown
+"endif
+
+execute pathogen#infect()
+
+" Allow vim to see aliases
+" Requires `shopt -s expand_aliases` in specified BASH_ENV file
+let $BASH_ENV = "~/.aliases"
