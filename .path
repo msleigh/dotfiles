@@ -1,0 +1,8 @@
+# Beware, $PERM is not defined yet
+
+PATH=${PATH}:${HOME}/.local/bin
+PATH=${PATH}:${HOME}/spag
+PATH=${PATH}:/perm/rd/dims/ninja-tools
+PATH=${PATH}:/perm/rd/dims/code-maat
+PATH=${PATH}:/perm/rd/dims/cloc
+export PATH
