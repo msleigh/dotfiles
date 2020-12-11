@@ -67,7 +67,8 @@
 	whoami = config user.email
 
 	last = log -1 HEAD
-	hist = log --graph --pretty=format:'%C(red)%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative unstage = reset HEAD --
+	hist = log --graph --pretty=format:'%C(red)%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+	unstage = reset HEAD --
 	ci = commit
 	br = branch
 	ignored = ls-files -o -i --exclude-standard
@@ -195,7 +196,7 @@
 
 [pull]
 
-    ff = only
+	ff = only
 
 [include]
 
