@@ -3,6 +3,12 @@
 # Required for non-interactive bash, e.g. from vim
 shopt -s expand_aliases
 
+# Common typos
+alias gti="git"
+alias opne="open"
+alias moduel="module"
+alias moduke="module"
+
 # Easier navigation: .., ..., ...., ....., ~ and -
 alias ..="cd .."
 alias ...="cd ../.."
@@ -17,6 +23,10 @@ alias dl="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/projects"
 alias g="git"
+alias e="echo"
+alias h="history"
+alias j="jobs"
+alias ?="echo $?"
 
 # Detect which `ls` flavor is in use
 if ls --color > /dev/null 2>&1; then # GNU `ls`
