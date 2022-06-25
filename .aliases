@@ -28,6 +28,10 @@ alias h="history"
 alias j="jobs"
 alias ?="echo $?"
 
+if [ ! $(uname -s) = 'Darwin' ]; then
+	alias pbcopy="xclip"
+fi
+
 # Detect which `ls` flavor is in use
 if ls --color > /dev/null 2>&1; then # GNU `ls`
 	colorflag="--color"
