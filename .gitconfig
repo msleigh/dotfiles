@@ -216,3 +216,7 @@
 [fetch]
 
 	prune = true
+
+[include]
+
+	path = ~rdx/git/.ifsgitconfig
