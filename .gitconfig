@@ -66,6 +66,18 @@
 	# Show the user email for the current repository.
 	whoami = config user.email
 
+	last = log -1 HEAD
+	hist = log --graph --pretty=format:'%C(red)%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+	unstage = reset HEAD --
+	ci = commit
+	br = branch
+	ignored = ls-files -o -i --exclude-standard
+	co = checkout
+	logc = log -p --pretty=oneline --abbrev-commit
+	staged = diff --staged
+	up = rebase
+	st = status
+
 [apply]
 
 	# Detect whitespace errors when applying a patch.
