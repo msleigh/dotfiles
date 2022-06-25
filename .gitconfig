@@ -111,6 +111,9 @@
 	# https://git-scm.com/docs/git-update-index#_untracked_cache
 	untrackedCache = true
 
+	# Ensure CRLF line endings even when the repository has LF
+	autocrlf = input
+
 [color]
 
 	# Use colors in Git commands that are capable of colored output when
