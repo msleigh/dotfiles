@@ -40,7 +40,7 @@ fi;
 
 # Install more recent versions of some macOS tools.
 brew install vim
-#brew install grep
+brew install grep
 #brew install openssh
 #brew install screen
 #brew install php
@@ -79,7 +79,7 @@ brew install xpdf
 brew install xz
 
 # Install other useful binaries.
-#brew install ack
+brew install ack
 #brew install exiv2
 brew install git
 brew install git-lfs
