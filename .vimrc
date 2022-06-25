@@ -1,10 +1,22 @@
-" Use the Solarized Dark theme
-set background=dark
-colorscheme solarized
-let g:solarized_termtrans=1
-
 " Make Vim more useful
 set nocompatible
+filetype off                  " required
+
+" set the runtime path to include Vundle and initialize
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+Plugin 'VundleVim/Vundle.vim'          " Let Vundle manage Vundle, required
+Plugin 'morhetz/gruvbox'               " Colour scheme
+Plugin 'editorconfig/editorconfig-vim' " Recognise .editorconfig files
+call vundle#end()
+
+filetype plugin indent on     " required
+
+" Use the Gruvbox Dark theme
+set background=dark
+colorscheme gruvbox
+"let g:solarized_termtrans=1
+
 " Use the OS clipboard by default (on versions compiled with `+clipboard`)
 set clipboard=unnamed
 " Enhance command-line completion
@@ -48,6 +60,10 @@ syntax on
 set cursorline
 " Make tabs as wide as two spaces
 set tabstop=2
+" These settings prevent all hard tabs in indentation
+set expandtab
+set shiftwidth=2
+set softtabstop=2
 " Show “invisible” characters
 set lcs=tab:▸\ ,trail:·,eol:¬,nbsp:_
 set list
@@ -82,6 +98,8 @@ if exists("&relativenumber")
 endif
 " Start scrolling three lines before the horizontal window border
 set scrolloff=3
+" Set indentation
+set autoindent
 
 " Strip trailing whitespace (,ss)
 function! StripWhitespace()
