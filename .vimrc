@@ -8,6 +8,7 @@ call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'          " Let Vundle manage Vundle, required
 Plugin 'morhetz/gruvbox'               " Colour scheme
 Plugin 'editorconfig/editorconfig-vim' " Recognise .editorconfig files
+Plugin 'rust-lang/rust.vim'            " Rust language config
 call vundle#end()
 
 filetype plugin indent on     " required
