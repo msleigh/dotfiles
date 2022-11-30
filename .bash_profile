@@ -50,3 +50,6 @@ complete -W "NSGlobalDomain" defaults;
 complete -o "nospace" -W "Contacts Calendar Dock Finder Mail Safari iTunes SystemUIServer Terminal Twitter" killall;
 
 test -e ~/.iterm2_shell_integration.bash && source ~/.iterm2_shell_integration.bash || true
+
+# Rust Cargo setup
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
