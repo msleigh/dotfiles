@@ -1,3 +1,7 @@
+PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/findutils/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/grep/libexec/gnubin:${PATH}";
 PATH="${HOME}/bin:${PATH}";
 
 # Rust
@@ -5,5 +9,10 @@ PATH="${HOME}/.cargo/bin:${PATH}";
 
 # Pipx
 PATH="${HOME}/.local/bin:${PATH}";
+
+# BATS
+PATH="${HOME}/projects/bats-core/bin:${PATH}";
+
+PATH="${HOME}/projects/pocket/bin:${PATH}";
 
 export PATH;
