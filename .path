@@ -6,4 +6,7 @@ PATH="${HOME}/.cargo/bin:${PATH}";
 # Pipx
 PATH="${HOME}/.local/bin:${PATH}";
 
+# BATS
+PATH="${HOME}/projects/bats-core/bin:${PATH}";
+
 export PATH;
