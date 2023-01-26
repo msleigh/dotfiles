@@ -1,3 +1,4 @@
 PATH="${HOME}/bin:${PATH}";
 PATH="${HOME}/.cargo/bin:${PATH}";
+PATH="${HOME}/projects/bats-core/bin:${PATH}";
 export PATH;
