@@ -45,3 +45,6 @@ export TMUX_TMPDIR=~/.tmux/tmp;
 export HOMEBREW_NO_ANALYTICS=1;
 export HOMEBREW_NO_AUTO_UPDATE=1;
 export HOMEBREW_NO_ENV_HINTS=1;
+
+# Export a $PERM variable
+export PERM="${HOME}/perm/${USER}";
