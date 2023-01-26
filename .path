@@ -1,3 +1,8 @@
+PATH="/usr/local/opt/coreutils/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/findutils/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/gnu-sed/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/grep/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/ruby/bin:${PATH}";
 PATH="${HOME}/bin:${PATH}";
 
 # Rust
@@ -6,5 +11,8 @@ PATH="${HOME}/.cargo/bin:${PATH}";
 # Pipx
 PATH="${HOME}/.local/bin:${PATH}";
 PATH="${HOME}/Library/Python/3.11/bin:${PATH}";
+
+# Pocket
+PATH="${HOME}/projects/pocket/bin:${PATH}";
 
 export PATH;
