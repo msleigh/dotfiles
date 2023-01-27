@@ -212,3 +212,7 @@
 [user]
 
 	useConfigOnly = true
+
+[fetch]
+
+	prune = true
