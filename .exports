@@ -39,4 +39,7 @@ export GPG_TTY=$(tty);
 export BASH_SILENCE_DEPRECATION_WARNING=1;
 
 # Force a central place for tmux sockets; for when /tmp is session-dependent
-export TMUX_TMPDIR=~/.tmux/tmp
+export TMUX_TMPDIR=~/.tmux/tmp;
+
+# See https://brew.sh/2023/02/16/homebrew-4.0.0
+export HOMEBREW_NO_ANALYTICS=1;
