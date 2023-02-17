@@ -169,3 +169,6 @@ alias blog="uv run ~/projects/blog/blog.py"
 
 # Tmux cheat sheet
 alias tcs="uv run ~/projects/tcs/tcs.py"
+
+# Sensible preprun options
+alias prun='preprun -Npt'
