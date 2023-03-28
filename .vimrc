@@ -115,6 +115,8 @@ noremap <leader>ss :call StripWhitespace()<CR>
 noremap <leader>W :w !sudo tee % > /dev/null<CR>
 " Copy/paste with iTerm shell integration
 xnoremap <leader>c <esc>:'<,'>w !it2copy<CR>
+" Paste a skeleton Bash script
+nnoremap <space>t :-1read $HOME/.vim/templates/bash/script<CR>/{<CR>o
 
 " Automatic commands
 if has("autocmd")

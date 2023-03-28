@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -eu
+set -o pipefail
+
+# Cleanup code (executes on success and failure)
+finish () {
+}
+trap finish EXIT
+
+usage () {
+cat<<EOF
+usage:
+EOF
+}
+
+
+main () {
+
+}
+
+main "$@"
