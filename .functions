@@ -183,3 +183,12 @@ function tre() {
 function remindme() {
 	echo "cowsay $1 | write ${USER}" | at "${@:2}"
 }
+
+# A fuzzy-finder function for listing directory contents filtered against a
+# search pattern. See
+# https://www.msleigh.io/blog/2024/01/21/finding-notes-and-blog-posts-with-fuzzyfinder-and-ripgrep
+function ff() {
+    cd "${1-"."}"
+    rg "$2" . -Sl \
+        | fzf -m --preview "rg \"$2\" ./{} --color=always -S "
+}
