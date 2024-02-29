@@ -83,6 +83,7 @@ brew install ack
 brew install ripgrep
 brew install fzf
 #brew install exiv2
+brew install gh
 brew install git
 brew install git-lfs
 brew install gs
