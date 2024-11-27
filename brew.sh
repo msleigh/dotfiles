@@ -88,6 +88,7 @@ brew install git
 brew install git-lfs
 brew install gs
 #brew install imagemagick --with-webp
+brew install inetutils
 brew install lua
 #brew install lynx
 brew install p7zip
