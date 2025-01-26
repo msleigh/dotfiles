@@ -1,0 +1,8 @@
+\.DS_Store
+\.git
+bin/subl
+bootstrap\.sh
+check\.sh
+init
+LICENSE.*
+README.*

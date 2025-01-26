@@ -2,20 +2,8 @@
 
 cd "$(dirname "${BASH_SOURCE}")";
 
-#git pull origin main;
-
 function doIt() {
-	rsync --exclude ".git/" \
-		--exclude ".DS_Store" \
-		--exclude ".osx" \
-		--exclude "bootstrap.sh" \
-		--exclude "check.sh" \
-		--exclude "README.md" \
-		--exclude "LICENSE-MIT.txt" \
-		--exclude "init" \
-		--exclude "bin/subl" \
-		-avh --no-perms . ~;
-	source ~/.bash_profile;
+    stow --dotfiles --dir=.. --target="${HOME}" --verbose=1 dotfiles
 }
 
 if [ "$1" == "--force" -o "$1" == "-f" ]; then
