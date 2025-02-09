@@ -163,3 +163,9 @@ alias reload="exec ${SHELL} -l"
 
 # Print each PATH entry on a separate line
 alias path='echo -e ${PATH//:/\\n}'
+
+# Blog helper tool
+alias blog="uv run ~/projects/blog/blog.py"
+
+# Tmux cheat sheet
+alias tcs="uv run ~/projects/tcs/tcs.py"
