@@ -86,6 +86,7 @@ brew install fzf
 brew install gh
 brew install git
 brew install git-lfs
+brew install gitleaks
 brew install gs
 #brew install imagemagick --with-webp
 brew install inetutils
