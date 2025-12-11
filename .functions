@@ -192,3 +192,9 @@ function ff() {
     rg "$2" . -Sl \
         | fzf -m --preview "rg \"$2\" ./{} --color=always -S "
 }
+
+function ds() {
+    free_storage=$(df -k / | awk 'NR==2 {print $4}')
+    free_storage_mb="$(echo "scale=2; $free_storage / 1024 / 1024" | bc )"
+    echo "${free_storage_mb} GB"
+}
