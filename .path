@@ -5,6 +5,5 @@ PATH="${HOME}/.cargo/bin:${PATH}";
 
 # Pipx
 PATH="${HOME}/.local/bin:${PATH}";
-PATH="${HOME}/Library/Python/3.11/bin:${PATH}";
 
 export PATH;
