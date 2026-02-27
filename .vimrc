@@ -171,6 +171,17 @@ xnoremap <leader>c <esc>:'<,'>w !it2copy<CR>
 " Paste a skeleton Bash script
 nnoremap <space>t :-1read $HOME/.vim/templates/bash/script<CR>/{<CR>o
 
+" Copilot keybindings
+noremap <leader>cc :Copilot<CR>
+noremap <leader>cs :CopilotSelect<CR>
+noremap <leader>cr :CopilotReplace<CR>
+noremap <leader>cd :CopilotDelete<CR>
+imap <C-L> <Plug>(copilot-accept-word)
+imap <C-K> <Plug>(copilot-next)
+imap <C-H> <Plug>(copilot-previous)
+imap <C-J> <Plug>(copilot-accept-line)
+imap <C-/> <Plug>(copilot-suggest)
+
 " Automatic commands
 if has("autocmd")
 	" Enable file type detection
