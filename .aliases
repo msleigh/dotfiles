@@ -178,3 +178,6 @@ alias blog="uv run ~/projects/blog/blog.py"
 
 # Tmux cheat sheet
 alias tcs="uv run ~/projects/tcs/tcs.py"
+
+# Run pn on hpc-login
+alias pn="ssh hpc-login pn"
