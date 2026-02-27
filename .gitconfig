@@ -114,6 +114,9 @@
 	# Ensure CRLF line endings even when the repository has LF
 	autocrlf = input
 
+	# Use Vim as the default editor, regardless of $VISUAL or $EDITOR
+	editor = vim
+
 [color "branch"]
 
 	current = yellow reverse
