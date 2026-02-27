@@ -103,6 +103,58 @@ set scrolloff=3
 " Set indentation
 set autoindent
 
+" Directory for template headers
+let s:template_dir = expand('~/.vim/templates')
+
+" Map file types to template directories
+let s:template_map = {
+    \ 'c': 'c',
+    \ 'cpp': 'c',
+    \ 'h': 'c',
+    \ 'hpp': 'c',
+    \ 'python': 'python',
+    \ 'bash': 'bash',
+    \ 'sh': 'bash',
+    \ 'f90': 'fortran',
+    \ 'f95': 'fortran',
+    \ 'f03': 'fortran',
+    \ 'F90': 'fortran',
+    \ 'F95': 'fortran',
+    \ 'F03': 'fortran',
+    \ }
+
+" Insert a copyright header at the top of the file (F4)
+function! InsertHeader()
+    " Get file extension and filetype
+    let l:ext = expand('%:e')
+    let l:ft = &filetype
+
+    " Determine which template directory to use
+    let l:template_subdir = ''
+    if has_key(s:template_map, l:ext)
+        let l:template_subdir = s:template_map[l:ext]
+    elseif has_key(s:template_map, l:ft)
+        let l:template_subdir = s:template_map[l:ft]
+    else
+        echo "No template available for this file type"
+        return
+    endif
+
+    " Full path to template
+    let l:template_path = s:template_dir . '/' . l:template_subdir . '/copyright.txt'
+
+    " Check if template exists
+    if !filereadable(l:template_path)
+        echo "Template file not found: " . l:template_path
+        return
+    endif
+
+    " Read and insert template at current position
+    let l:lines = readfile(l:template_path)
+    call append(line('.') - 1, l:lines)
+endfunction
+nnoremap <F4> :call InsertHeader()<CR>
+
 " Strip trailing whitespace (,ss)
 function! StripWhitespace()
 	let save_cursor = getpos(".")
