@@ -164,6 +164,15 @@ alias reload="exec ${SHELL} -l"
 # Print each PATH entry on a separate line
 alias path='echo -e ${PATH//:/\\n}'
 
+# Run Python tools via uvx without a separate install
+alias ruff="uvx ruff"
+alias black="uvx black"
+alias mypy="uvx mypy"
+alias pytest="uvx pytest"
+alias isort="uvx isort"
+alias cookiecutter="uvx cookiecutter"
+alias pipdeptree="uvx pipdeptree"
+
 # Blog helper tool
 alias blog="uv run ~/projects/blog/blog.py"
 
