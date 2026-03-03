@@ -172,6 +172,7 @@ alias pytest="uvx pytest"
 alias isort="uvx isort"
 alias cookiecutter="uvx cookiecutter"
 alias pipdeptree="uvx pipdeptree"
+alias pyzotero='uvx --from "pyzotero[cli]" pyzotero'
 
 # Blog helper tool
 alias blog="uv run ~/projects/blog/blog.py"
