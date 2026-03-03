@@ -15,3 +15,6 @@ Thumbs.db
 
 # Slurm job output
 slurm-[0-9]*.out
+
+# Claude Code
+.claude/
