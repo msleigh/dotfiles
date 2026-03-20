@@ -11,6 +11,10 @@ brew upgrade
 # Save Homebrew’s installed location.
 BREW_PREFIX=$(brew --prefix)
 
+# Should be already installed (due to ~/Documents/setup)
+brew install gh
+brew install stow
+
 # Install GNU core utilities (those that come with macOS are outdated).
 # Don’t forget to add `$(brew --prefix coreutils)/libexec/gnubin` to `$PATH`.
 brew install coreutils
@@ -32,76 +36,45 @@ if ! fgrep -q "${BREW_PREFIX}/bin/bash" /etc/shells; then
   chsh -s "${BREW_PREFIX}/bin/bash";
 fi;
 
-# Install `wget` with IRI support.
-#brew install wget --with-iri
-
-# Install GnuPG to enable PGP-signing commits.
-#brew install gnupg
-
-# Install more recent versions of some macOS tools.
-brew install vim
+brew install ack
+brew install actionlint
+brew install borgbackup
+brew install cloc
+brew install fzf
+brew install gcc
+brew install git
+brew install git-gui
+brew install gitleaks
+brew install graphviz
 brew install grep
-#brew install openssh
-#brew install screen
-#brew install php
-#brew install gmp
-
-# Install font tools.
-#brew tap bramstein/webfonttools
-#brew install sfnt2woff
-#brew install sfnt2woff-zopfli
-#brew install woff2
-
-# Install some CTF tools; see https://github.com/ctfs/write-ups.
-#brew install aircrack-ng
-#brew install bfg
-#brew install binutils
-#brew install binwalk
-#brew install cifer
-#brew install dex2jar
-#brew install dns2tcp
-#brew install fcrackzip
-#brew install foremost
-#brew install hashpump
-#brew install hydra
-#brew install john
-#brew install knock
-#brew install netpbm
-#brew install nmap
-#brew install pngcheck
-#brew install socat
-#brew install sqlmap
-#brew install tcpflow
-#brew install tcpreplay
-#brew install tcptrace
-#brew install ucspi-tcp # `tcpserver` etc.
-brew install xpdf
+brew install gs
+brew install jq
+brew install lua
+brew install node
+brew install opencode
+brew install pandoc
+brew install parallel
+brew install ripgrep
+brew install tree
+brew install uv
+brew install vim
 brew install xz
 
-# Install other useful binaries.
-brew install ack
-brew install ripgrep
-brew install fzf
-#brew install exiv2
-brew install gh
-brew install git
-brew install git-lfs
-brew install gitleaks
-brew install gs
-#brew install imagemagick --with-webp
-brew install inetutils
-brew install lua
-#brew install lynx
-brew install p7zip
-brew install pigz
-#brew install pv
-brew install rename
-#brew install rlwrap
-brew install ssh-copy-id
-brew install stow
-brew install tree
-brew install vbindiff
-brew install zopfli
+brew install --cask anki
+brew install --cask bitwarden
+brew install --cask claude-code
+brew install --cask codex
+brew install --cask firefox
+brew install --cask iterm2
+brew install --cask jellyfin-media-player
+brew install --cask musescore
+brew install --cask obsidian
+brew install --cask proton-drive
+brew install --cask signal
+brew install --cask spotify
+brew install --cask vlc
+brew install --cask zotero
 
 # Remove outdated versions from the cellar.
 brew cleanup
+
