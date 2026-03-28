@@ -74,6 +74,7 @@ brew install --cask jellyfin-media-player
 brew install --cask musescore
 brew install --cask obsidian
 brew install --cask proton-drive
+brew install --cask protonvpn
 brew install --cask spotify
 brew install --cask vlc
 brew install --cask zotero
