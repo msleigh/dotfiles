@@ -74,11 +74,9 @@ brew install --cask jellyfin-media-player
 brew install --cask musescore
 brew install --cask obsidian
 brew install --cask proton-drive
-brew install --cask signal
 brew install --cask spotify
 brew install --cask vlc
 brew install --cask zotero
 
 # Remove outdated versions from the cellar.
 brew cleanup
-
