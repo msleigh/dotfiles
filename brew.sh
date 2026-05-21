@@ -52,7 +52,7 @@ brew install gs
 brew install jq
 brew install lua
 brew install node
-brew install opencode
+brew install anomalyco/tap/opencode
 brew install pandoc
 brew install parallel
 brew install ripgrep
