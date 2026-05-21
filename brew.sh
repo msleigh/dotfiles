@@ -46,6 +46,7 @@ brew install git
 brew install git-gui
 brew install gitleaks
 brew install gnu-sed
+brew install google-drive
 brew install graphviz
 brew install grep
 brew install gs
