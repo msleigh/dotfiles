@@ -1,0 +1,68 @@
+{{- if eq .machine "home" -}}
+PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/findutils/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/grep/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/ruby/bin:${PATH}";
+
+# Rust
+PATH="${HOME}/.cargo/bin:${PATH}";
+
+PATH="${HOME}/bin:${PATH}";
+{{- else if eq .machine "work" -}}
+PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/findutils/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:${PATH}";
+PATH="/opt/homebrew/opt/grep/libexec/gnubin:${PATH}";
+PATH="${HOME}/bin:${PATH}";
+
+# Rust
+PATH="${HOME}/.cargo/bin:${PATH}";
+
+# Pipx
+PATH="${HOME}/.local/bin:${PATH}";
+PATH="${HOME}/Library/Python/3.11/bin:${PATH}";
+
+# BATS
+PATH="${HOME}/projects/bats-core/bin:${PATH}";
+
+PATH="${HOME}/projects/pocket/bin:${PATH}";
+{{- else if eq .machine "serv" -}}
+PATH="/usr/local/opt/coreutils/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/findutils/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/gnu-sed/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/grep/libexec/gnubin:${PATH}";
+PATH="/usr/local/opt/ruby/bin:${PATH}";
+PATH="${HOME}/bin:${PATH}";
+
+# Rust
+PATH="${HOME}/.cargo/bin:${PATH}";
+
+# Pipx
+PATH="${HOME}/.local/bin:${PATH}";
+PATH="${HOME}/Library/Python/3.11/bin:${PATH}";
+
+# Pocket
+PATH="${HOME}/projects/pocket/bin:${PATH}";
+{{- else if eq .machine "atos" -}}
+PATH="${HOME}/bin:${PATH}";
+
+# Rust
+PATH="${HOME}/.cargo/bin:${PATH}";
+
+# Pipx
+PATH="${HOME}/.local/bin:${PATH}";
+
+# BATS
+PATH="${HOME}/projects/bats-core/bin:${PATH}";
+{{- else -}}
+PATH="${HOME}/bin:${PATH}";
+
+# Rust
+PATH="${HOME}/.cargo/bin:${PATH}";
+
+# Pipx
+PATH="${HOME}/.local/bin:${PATH}";
+{{- end }}
+
+export PATH;

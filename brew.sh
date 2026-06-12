@@ -2,6 +2,9 @@
 
 # Install command-line tools using Homebrew.
 
+# Read machine type from chezmoi config
+MACHINE=$(grep ‘machine = ‘ ~/.config/chezmoi/chezmoi.toml 2>/dev/null | sed ‘s/.*machine = "\(.*\)".*/\1/’)
+
 # Make sure we’re using the latest Homebrew.
 brew update
 
@@ -46,14 +49,20 @@ brew install git
 brew install git-gui
 brew install gitleaks
 brew install gnu-sed
-brew install google-drive
+if [[ "$MACHINE" != "atos" ]]; then
+  brew install google-drive
+fi
 brew install graphviz
 brew install grep
 brew install gs
 brew install jq
 brew install lua
 brew install node
-brew install anomalyco/tap/opencode
+if [[ "$MACHINE" == "atos" ]]; then
+  brew install opencode
+else
+  brew install anomalyco/tap/opencode
+fi
 brew install pandoc
 brew install parallel
 brew install ripgrep
@@ -75,6 +84,12 @@ brew install --cask jellyfin-media-player
 brew install --cask musescore
 brew install --cask obsidian
 brew install --cask proton-drive
+if [[ "$MACHINE" == "home" || "$MACHINE" == "serv" ]]; then
+  brew install --cask protonvpn
+fi
+if [[ "$MACHINE" == "home" ]]; then
+  brew install --cask signal
+fi
 brew install --cask spotify
 brew install --cask vlc
 brew install --cask zotero

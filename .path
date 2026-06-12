@@ -1,9 +1,0 @@
-PATH="${HOME}/bin:${PATH}";
-
-# Rust
-PATH="${HOME}/.cargo/bin:${PATH}";
-
-# Pipx
-PATH="${HOME}/.local/bin:${PATH}";
-
-export PATH;

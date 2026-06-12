@@ -220,3 +220,15 @@
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
+{{- if eq .machine "work" }}
+
+[include]
+
+	path = ~/projects/ifs-git-tools/cfg/.ifsgitconfig
+{{- end }}
+{{- if eq .machine "atos" }}
+
+[include]
+
+	path = ~rdx/git/.ifsgitconfig
+{{- end }}
