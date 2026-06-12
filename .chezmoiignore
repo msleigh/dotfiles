@@ -1,4 +1,5 @@
 AGENTS.md
+bin/subl
 bootstrap.sh
 check.sh
 CLAUDE.md
