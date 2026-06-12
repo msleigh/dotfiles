@@ -64,3 +64,6 @@ test -e ~/.iterm2_shell_integration.bash && source ~/.iterm2_shell_integration.b
 
 # Rust Cargo setup
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+
+# Pre-warm NFS page cache for tmux plugins to avoid cold-start prefix delay
+find ~/.tmux/plugins -type f 2>/dev/null | xargs cat > /dev/null 2>&1 &
