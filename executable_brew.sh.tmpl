@@ -2,16 +2,13 @@
 
 # Install command-line tools using Homebrew.
 
-# Read machine type from chezmoi config
-MACHINE=$(grep ‘machine = ‘ ~/.config/chezmoi/chezmoi.toml 2>/dev/null | sed ‘s/.*machine = "\(.*\)".*/\1/’)
-
-# Make sure we’re using the latest Homebrew.
+# Make sure we're using the latest Homebrew.
 brew update
 
 # Upgrade any already-installed formulae.
 brew upgrade
 
-# Save Homebrew’s installed location.
+# Save Homebrew's installed location.
 BREW_PREFIX=$(brew --prefix)
 
 # Should be already installed (due to ~/Documents/setup)
@@ -19,7 +16,7 @@ brew install gh
 brew install stow
 
 # Install GNU core utilities (those that come with macOS are outdated).
-# Don’t forget to add `$(brew --prefix coreutils)/libexec/gnubin` to `$PATH`.
+# Don't forget to add `$(brew --prefix coreutils)/libexec/gnubin` to `$PATH`.
 brew install coreutils
 #ln -s "${BREW_PREFIX}/bin/gsha256sum" "${BREW_PREFIX}/bin/sha256sum"
 
@@ -49,20 +46,20 @@ brew install git
 brew install git-gui
 brew install gitleaks
 brew install gnu-sed
-if [[ "$MACHINE" != "atos" ]]; then
-  brew install google-drive
-fi
+{{- if ne .machine "atos" }}
+brew install google-drive
+{{- end }}
 brew install graphviz
 brew install grep
 brew install gs
 brew install jq
 brew install lua
 brew install node
-if [[ "$MACHINE" == "atos" ]]; then
-  brew install opencode
-else
-  brew install anomalyco/tap/opencode
-fi
+{{- if eq .machine "atos" }}
+brew install opencode
+{{- else }}
+brew install anomalyco/tap/opencode
+{{- end }}
 brew install pandoc
 brew install parallel
 brew install ripgrep
@@ -84,12 +81,12 @@ brew install --cask jellyfin-media-player
 brew install --cask musescore
 brew install --cask obsidian
 brew install --cask proton-drive
-if [[ "$MACHINE" == "home" || "$MACHINE" == "serv" ]]; then
-  brew install --cask protonvpn
-fi
-if [[ "$MACHINE" == "home" ]]; then
-  brew install --cask signal
-fi
+{{- if or (eq .machine "home") (eq .machine "serv") }}
+brew install --cask protonvpn
+{{- end }}
+{{- if eq .machine "home" }}
+brew install --cask signal
+{{- end }}
 brew install --cask spotify
 brew install --cask vlc
 brew install --cask zotero
