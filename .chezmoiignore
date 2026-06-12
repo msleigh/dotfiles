@@ -1,5 +1,6 @@
 AGENTS.md
 bin/subl
+bin/zotread
 bootstrap.sh
 check.sh
 CLAUDE.md
