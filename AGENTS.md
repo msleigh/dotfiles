@@ -1,84 +1,96 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Overview
 
-Personal dotfiles repository, forked from [mathiasbynens/dotfiles](https://github.com/mathiasbynens/dotfiles). Managed via **GNU Stow**, which creates symlinks from `$HOME` into this repo.
+Personal dotfiles repository, forked from [mathiasbynens/dotfiles](https://github.com/mathiasbynens/dotfiles). Managed via **chezmoi**, which templates and deploys dotfiles from this repo to `$HOME`.
 
 ## Commands
 
 ```bash
-# Install/update dotfiles (creates symlinks via stow)
-bash bootstrap.sh        # prompts for confirmation
-bash bootstrap.sh -f     # skip confirmation
+# Deploy dotfiles to $HOME
+chezmoi apply
 
-# Install Homebrew packages
-bash brew.sh
+# Preview what would change
+chezmoi diff
 
-# Check what would change (diff repo vs $HOME)
-bash check.sh
+# Edit a managed file (opens in $EDITOR, applies on save)
+chezmoi edit ~/.aliases
+
+# Install Homebrew packages (deployed to ~/brew.sh by chezmoi)
+bash ~/brew.sh
 
 # Apply macOS system defaults (requires sudo)
-bash .macos
+bash ~/.macos
 ```
 
 ## Architecture
 
-### Stow-based symlink management
+### chezmoi source layout
 
-`bootstrap.sh` runs:
-```
-stow --dotfiles --dir=.. --target="${HOME}" --verbose=1 dotfiles
+chezmoi's source directory is this repo. Files are named with chezmoi conventions:
+
+- `dot_foo` → `~/.foo` (plain dotfile)
+- `dot_foo.tmpl` → `~/.foo` (templated dotfile, rendered before deployment)
+- `executable_foo.tmpl` → `~/foo` (executable script, rendered before deployment)
+
+Files listed in `.chezmoiignore` are not deployed (e.g. `bootstrap.sh`, `check.sh`, `AGENTS.md`, `README.md`).
+
+### Machine config
+
+Each machine carries one untracked file that declares its identity:
+
+```toml
+# ~/.config/chezmoi/chezmoi.toml
+sourceDir = "/path/to/dotfiles"
+
+[data]
+    machine = "home"   # one of: home, work, serv, atos
 ```
 
-Stow maps every file in this repo to the corresponding path under `$HOME`. Files listed in `.stow-local-ignore` are excluded from symlinking (e.g. `bootstrap.sh`, `brew.sh`, `check.sh`, `init/`, `README.*`, `LICENSE.*`, `bin/subl`).
+This file is never committed. chezmoi reads `.machine` from it when rendering templates.
+
+### Templated files
+
+Six files vary per machine and use Go template syntax:
+
+| Source file | Deployed as | Varies by machine |
+|---|---|---|
+| `dot_path.tmpl` | `~/.path` | GNU tool paths, ruby, Python, bats, pocket |
+| `dot_bash_profile.tmpl` | `~/.bash_profile` | brew shellenv (work only) |
+| `dot_exports.tmpl` | `~/.exports` | `$PERM` variable (work only) |
+| `dot_aliases.tmpl` | `~/.aliases` | `pn` alias (work), `prun` alias (atos) |
+| `dot_gitconfig.tmpl` | `~/.gitconfig` | `[include]` for ifs-git-tools (work, atos) |
+| `executable_brew.sh.tmpl` | `~/brew.sh` | package list varies per machine |
 
 ### Shell configuration loading order
 
-`.bash_profile` sources these files in order:
-1. `.path` — PATH additions (`$HOME/bin`, Cargo, Pipx)
-2. `.bash_prompt` — Solarized Dark prompt with git status
-3. `.exports` — environment variables
-4. `.aliases` — command aliases
-5. `.functions` — shell functions
+`~/.bash_profile` sources these files in order:
+1. `~/.path` — PATH additions
+2. `~/.bash_prompt` — Solarized Dark prompt with git status
+3. `~/.exports` — environment variables
+4. `~/.aliases` — command aliases
+5. `~/.functions` — shell functions
 6. `~/.extra` — machine-local config (not tracked; for secrets/overrides)
 
 ### Key files
 
 | File | Purpose |
 |------|---------|
-| `.gitconfig` | Extensive git aliases; see `[alias]` section for full list |
-| `.vimrc` | Vundle plugins (gruvbox, editorconfig, rust.vim, copilot.vim), templates, Copilot bindings |
-| `.tmux.conf` | Prefix=Ctrl-A, vi mode, TPM plugins (sensible, resurrect) |
-| `.macos` | macOS `defaults write` settings — most lines commented out for safety |
-| `.exports` | Sets `EDITOR=vim`, locale (en_GB.UTF-8), history size (32K), Homebrew no-analytics |
+| `dot_gitconfig.tmpl` | Extensive git aliases; see `[alias]` section for full list |
+| `dot_vimrc` | Vundle plugins (gruvbox, editorconfig, rust.vim, copilot.vim), templates, Copilot bindings |
+| `dot_tmux.conf` | Prefix=Ctrl-A, vi mode, TPM plugins (sensible, resurrect) |
+| `dot_macos` | macOS `defaults write` settings — most lines commented out for safety |
+| `dot_exports.tmpl` | Sets `EDITOR=vim`, locale (en_GB.UTF-8), history size (32K), Homebrew no-analytics |
 
 ### Vim templates
 
-`.vimrc` has file template support triggered by `Space+t` (bash skeleton) and `F4` (copyright header). Templates live in `.vim/templates/bash/`.
+`dot_vimrc` has file template support triggered by `Space+t` (bash skeleton) and `F4` (copyright header). Templates live in `.vim/templates/bash/`.
 
 ### Machine-local customization
 
-Create `~/.extra` for anything not committed here (tokens, machine-specific aliases, `git config user.email`, etc.).
-
-## Branch structure
-
-`main` contains platform-independent config that applies everywhere. Platform-specific branches carry additional commits on top:
-
-| Branch | Purpose |
-|--------|---------|
-| `machome` | Home Mac |
-| `macwork` | Work Mac |
-| `atos` | ATOS environment |
-
-Keep as much as possible in `main`. When `main` changes, rebase the platform branches onto it:
-
-```bash
-git checkout machome && git rebase main
-git checkout macwork && git rebase main
-git checkout atos    && git rebase main
-```
+Create `~/.extra` for anything not committed here (tokens, `git config user.email`, machine-specific aliases, etc.).
 
 ## Upstream
 
