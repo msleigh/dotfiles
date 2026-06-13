@@ -6,6 +6,8 @@ bin/zotread
 bootstrap.sh
 check.sh
 CLAUDE.md
+init
+init/**
 LICENSE-MIT.txt
 README.md
 uv.sh
