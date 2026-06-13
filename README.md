@@ -61,6 +61,24 @@ bash ~/.macos
 
 Create `~/.extra` for anything that shouldn't be committed: API tokens, `git config user.email`, machine-specific aliases, etc. It is sourced by `~/.bash_profile` after all other dotfiles.
 
+## Secret scanning
+
+This repo is public, so commits are scanned for secrets with [gitleaks](https://github.com/gitleaks/gitleaks) via a [pre-commit](https://pre-commit.com/) hook (`.pre-commit-config.yaml`). pre-commit manages its own pinned gitleaks binary, so no separate gitleaks install is required.
+
+After cloning, arm the hook once:
+
+```bash
+pre-commit install
+```
+
+Run it manually across all files at any time:
+
+```bash
+pre-commit run --all-files
+```
+
+The config is excluded from deployment in `.chezmoiignore`, so it stays in the repo and is never written to `$HOME`.
+
 ## Structure
 
 Machine-specific differences are handled via Go templates rather than branches. Six files are templated (`dot_path.tmpl`, `dot_bash_profile.tmpl`, `dot_exports.tmpl`, `dot_aliases.tmpl`, `dot_gitconfig.tmpl`, `executable_brew.sh.tmpl`); the rest are plain files renamed with chezmoi's `dot_` prefix convention. See `AGENTS.md` for full architecture details.

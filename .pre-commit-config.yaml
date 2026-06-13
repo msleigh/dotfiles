@@ -1,0 +1,8 @@
+# Pre-commit hooks for this repo (the dotfiles source). Not deployed to $HOME.
+# Run manually with: pre-commit run --all-files
+# Hooks installed via: pre-commit install
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
