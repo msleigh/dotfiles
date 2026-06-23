@@ -1,9 +1,9 @@
-AGENTS.md
+/AGENTS.md
 .gitignore
 .pre-commit-config.yaml
 bin/subl
 bin/zotread
-CLAUDE.md
+/CLAUDE.md
 init
 init/**
 LICENSE-MIT.txt
