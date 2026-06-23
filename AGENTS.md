@@ -86,7 +86,7 @@ Six files vary per machine and use Go template syntax:
 
 ### Vim templates
 
-`dot_vimrc` has file template support triggered by `Space+t` (bash skeleton) and `F4` (copyright header). Templates live in `.vim/templates/bash/`.
+`dot_vimrc` has file template support triggered by `Space+t` (bash skeleton). Templates live in `dot_vim/templates/bash/`.
 
 ### Machine-local customization
 
