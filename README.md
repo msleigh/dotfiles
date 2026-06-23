@@ -1,6 +1,7 @@
 # dotfiles
 
-Personal dotfiles, forked from [mathiasbynens/dotfiles](https://github.com/mathiasbynens/dotfiles) and adapted for use across multiple machines. Managed with [chezmoi](https://www.chezmoi.io/).
+My personal dotfiles, managed with [chezmoi](https://www.chezmoi.io/) and
+templated per machine across macOS and Linux.
 
 ## Installation
 
@@ -35,7 +36,8 @@ sourceDir = "/path/to/this/repo"
 chezmoi apply
 ```
 
-This deploys all dotfiles to `$HOME`, rendering any machine-specific templates for the declared machine. To preview changes before applying:
+This deploys all dotfiles to `$HOME`, rendering any machine-specific templates
+for the declared machine. To preview changes before applying:
 
 ```bash
 chezmoi diff
@@ -65,11 +67,17 @@ bash ~/.macos
 
 ## Machine-local customisation
 
-Create `~/.extra` for anything that shouldn't be committed: API tokens, `git config user.email`, machine-specific aliases, etc. It is sourced by `~/.bash_profile` after all other dotfiles.
+Create `~/.extra` for anything that shouldn't be committed: API tokens,
+machine-specific aliases, etc. It is sourced by `~/.bash_profile` after all
+other dotfiles.
 
 ## Secret scanning
 
-This repo is public, so commits are scanned for secrets with [gitleaks](https://github.com/gitleaks/gitleaks) via a [pre-commit](https://pre-commit.com/) hook (`.pre-commit-config.yaml`). pre-commit manages its own pinned gitleaks binary, so no separate gitleaks install is required.
+This repo is public, so commits are scanned for secrets with
+[gitleaks](https://github.com/gitleaks/gitleaks) via a
+[pre-commit](https://pre-commit.com/) hook (`.pre-commit-config.yaml`).
+pre-commit manages its own pinned gitleaks binary, so no separate gitleaks
+install is required.
 
 After cloning, arm the hook once:
 
@@ -83,31 +91,28 @@ Run it manually across all files at any time:
 pre-commit run --all-files
 ```
 
-The config is excluded from deployment in `.chezmoiignore`, so it stays in the repo and is never written to `$HOME`.
+The config is excluded from deployment in `.chezmoiignore`, so it stays in the
+repo and is never written to `$HOME`.
 
 ## Structure
 
-Machine-specific differences are handled via Go templates rather than branches. Five files are templated (`dot_path.tmpl`, `dot_exports.tmpl`, `dot_aliases.tmpl`, `dot_gitconfig.tmpl`, `executable_brew.sh.tmpl`); the rest are plain files renamed with chezmoi's `dot_` prefix convention. See `AGENTS.md` for full architecture details.
+Machine-specific differences are handled via Go templates rather than branches.
+Five files are templated (`dot_path.tmpl`, `dot_exports.tmpl`,
+`dot_aliases.tmpl`, `dot_gitconfig.tmpl`, `executable_brew.sh.tmpl`); the rest
+are plain files renamed with chezmoi's `dot_` prefix convention. See
+`AGENTS.md` for full architecture details.
 
-## Upstream
+## Provenance
+
+Originally forked from [Mathias Bynens'
+dotfiles](https://github.com/mathiasbynens/dotfiles) — a long-running and
+widely used macOS dotfiles project — and since rewritten around chezmoi with
+per-machine templating. With thanks to Mathias, and to the wider dotfiles
+community his repository drew on, for the foundations.
+
+Upstream has seen little activity since 2024 but is still tracked for
+reference:
 
 ```bash
-git fetch upstream
+git fetch upstream   # tracks https://github.com/mathiasbynens/dotfiles.git
 ```
-
-Remote `upstream` tracks `https://github.com/mathiasbynens/dotfiles.git`.
-
-## Thanks to…
-
-* @ptb and [his _macOS Setup_ repository](https://github.com/ptb/mac-setup)
-* [Ben Alman](http://benalman.com/) and his [dotfiles repository](https://github.com/cowboy/dotfiles)
-* [Cătălin Mariș](https://github.com/alrra) and his [dotfiles repository](https://github.com/alrra/dotfiles)
-* [Gianni Chiappetta](https://butt.zone/) for sharing his [amazing collection of dotfiles](https://github.com/gf3/dotfiles)
-* [Jan Moesen](http://jan.moesen.nu/) and his [ancient `.bash_profile`](https://gist.github.com/1156154) + [shiny _tilde_ repository](https://github.com/janmoesen/tilde)
-* [Matijs Brinkhuis](https://matijs.brinkhu.is/) and his [dotfiles repository](https://github.com/matijs/dotfiles)
-* [Nicolas Gallagher](http://nicolasgallagher.com/) and his [dotfiles repository](https://github.com/necolas/dotfiles)
-* [Sindre Sorhus](https://sindresorhus.com/)
-* [Tom Ryder](https://sanctum.geek.nz/) and his [dotfiles repository](https://sanctum.geek.nz/cgit/dotfiles.git/about)
-* [Kevin Suttle](http://kevinsuttle.com/) and his [dotfiles repository](https://github.com/kevinSuttle/dotfiles) and [macOS-Defaults project](https://github.com/kevinSuttle/macOS-Defaults)
-* [Haralan Dobrev](https://hkdobrev.com/)
-* Anyone who [contributed a patch](https://github.com/mathiasbynens/dotfiles/contributors) or [made a helpful suggestion](https://github.com/mathiasbynens/dotfiles/issues)
