@@ -2,6 +2,12 @@
 
 # Install command-line tools using Homebrew.
 
+# Bail out early if not running on macOS — this Homebrew setup is macOS-only.
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  echo "brew.sh: not running on macOS; skipping." >&2
+  exit 0
+fi
+
 # Make sure we’re using the latest Homebrew.
 brew update
 
@@ -46,7 +52,7 @@ brew install git
 brew install git-gui
 brew install gitleaks
 brew install gnu-sed
-{{- if and (ne .machine "atos") (ne .machine "work") }}
+{{- if ne .machine "work" }}
 brew install google-drive
 {{- end }}
 brew install graphviz
@@ -55,11 +61,8 @@ brew install gs
 brew install jq
 brew install lua
 brew install node
-{{- if or (eq .machine "atos") (eq .machine "work") }}
-brew install opencode
-{{- else }}
+brew trust --formula anomalyco/tap/opencode
 brew install anomalyco/tap/opencode
-{{- end }}
 brew install pandoc
 brew install parallel
 brew install ripgrep
