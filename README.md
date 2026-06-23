@@ -44,6 +44,12 @@ chezmoi diff
 ## Ongoing use
 
 ```bash
+# Preview what apply would change (also the way to check $HOME for drift)
+chezmoi diff
+
+# Check whether $HOME matches the source state (non-zero exit if it differs)
+chezmoi verify
+
 # Re-deploy after pulling changes
 chezmoi apply
 

@@ -35,7 +35,7 @@ chezmoi's source directory is this repo. Files are named with chezmoi convention
 - `dot_foo.tmpl` → `~/.foo` (templated dotfile, rendered before deployment)
 - `executable_foo.tmpl` → `~/foo` (executable script, rendered before deployment)
 
-Files listed in `.chezmoiignore` are not deployed (e.g. `bootstrap.sh`, `check.sh`, `AGENTS.md`, `README.md`).
+Files listed in `.chezmoiignore` are not deployed (e.g. `AGENTS.md`, `README.md`).
 
 ### Machine config
 

@@ -3,8 +3,6 @@ AGENTS.md
 .pre-commit-config.yaml
 bin/subl
 bin/zotread
-bootstrap.sh
-check.sh
 CLAUDE.md
 init
 init/**
