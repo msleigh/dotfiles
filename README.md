@@ -87,7 +87,7 @@ The config is excluded from deployment in `.chezmoiignore`, so it stays in the r
 
 ## Structure
 
-Machine-specific differences are handled via Go templates rather than branches. Six files are templated (`dot_path.tmpl`, `dot_bash_profile.tmpl`, `dot_exports.tmpl`, `dot_aliases.tmpl`, `dot_gitconfig.tmpl`, `executable_brew.sh.tmpl`); the rest are plain files renamed with chezmoi's `dot_` prefix convention. See `AGENTS.md` for full architecture details.
+Machine-specific differences are handled via Go templates rather than branches. Five files are templated (`dot_path.tmpl`, `dot_exports.tmpl`, `dot_aliases.tmpl`, `dot_gitconfig.tmpl`, `executable_brew.sh.tmpl`); the rest are plain files renamed with chezmoi's `dot_` prefix convention. See `AGENTS.md` for full architecture details.
 
 ## Upstream
 

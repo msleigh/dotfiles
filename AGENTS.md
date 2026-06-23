@@ -53,12 +53,11 @@ This file is never committed. chezmoi reads `.machine` from it when rendering te
 
 ### Templated files
 
-Six files vary per machine and use Go template syntax:
+Five files vary per machine and use Go template syntax:
 
 | Source file | Deployed as | Varies by machine |
 |---|---|---|
 | `dot_path.tmpl` | `~/.path` | GNU tool paths, ruby, Python, bats, pocket |
-| `dot_bash_profile.tmpl` | `~/.bash_profile` | brew shellenv (work only) |
 | `dot_exports.tmpl` | `~/.exports` | `$PERM` variable (work only) |
 | `dot_aliases.tmpl` | `~/.aliases` | `pn` alias (work), `prun` alias (atos) |
 | `dot_gitconfig.tmpl` | `~/.gitconfig` | `[include]` for ifs-git-tools (work, atos) |

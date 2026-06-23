@@ -1,8 +1,14 @@
-{{ if eq .machine "work" -}}
-# Export the stuff for Brew
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# Set up the Homebrew environment (PATH, MANPATH, HOMEBREW_*).
+# Tries the Apple Silicon prefix first, then the Intel prefix, and runs
+# whichever brew exists — a no-op only where Homebrew isn't installed at all.
+for brewbin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+	if [ -x "$brewbin" ]; then
+		eval "$("$brewbin" shellenv)"
+		break
+	fi
+done
+unset brewbin
 
-{{ end -}}
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
