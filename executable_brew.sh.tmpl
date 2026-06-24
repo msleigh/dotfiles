@@ -44,7 +44,6 @@ fi;
 
 brew install ack
 brew install actionlint
-brew install borgbackup
 brew install cloc
 brew install fzf
 brew install gcc
@@ -53,6 +52,7 @@ brew install git-gui
 brew install gitleaks
 brew install gnu-sed
 {{- if ne .machine "work" }}
+brew install borgbackup
 brew install google-drive
 {{- end }}
 brew install graphviz
@@ -74,26 +74,26 @@ brew install vim
 brew install xz
 brew install zoom
 
-brew install --cask anki
 brew install --cask bitwarden
 brew install --cask claude-code
 brew install --cask codex
 brew install --cask docker-desktop
 brew install --cask firefox
 brew install --cask iterm2
+brew install --cask obsidian
+brew install --cask vlc
+brew install --cask zotero
+{{- if ne .machine "work" }}
+brew install --cask anki
 brew install --cask jellyfin-media-player
 brew install --cask musescore
-brew install --cask obsidian
 brew install --cask proton-drive
-{{- if or (eq .machine "home") (eq .machine "serv") }}
 brew install --cask protonvpn
+brew install --cask spotify
 {{- end }}
 {{- if eq .machine "home" }}
 brew install --cask signal
 {{- end }}
-brew install --cask spotify
-brew install --cask vlc
-brew install --cask zotero
 
 # Remove outdated versions from the cellar.
 brew cleanup
