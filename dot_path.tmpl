@@ -8,6 +8,9 @@ PATH="${HOMEBREW_PREFIX}/opt/ruby/bin:${PATH}";
 # Rust
 PATH="${HOME}/.cargo/bin:${PATH}";
 
+# uv tools
+PATH="${HOME}/.local/bin:${PATH}";
+
 PATH="${HOME}/bin:${PATH}";
 {{- else if eq .machine "work" -}}
 PATH="${HOMEBREW_PREFIX}/opt/coreutils/libexec/gnubin:${PATH}";
@@ -19,7 +22,7 @@ PATH="${HOME}/bin:${PATH}";
 # Rust
 PATH="${HOME}/.cargo/bin:${PATH}";
 
-# Pipx
+# uv tools
 PATH="${HOME}/.local/bin:${PATH}";
 PATH="${HOME}/Library/Python/3.11/bin:${PATH}";
 
@@ -38,7 +41,7 @@ PATH="${HOME}/bin:${PATH}";
 # Rust
 PATH="${HOME}/.cargo/bin:${PATH}";
 
-# Pipx
+# uv tools
 PATH="${HOME}/.local/bin:${PATH}";
 PATH="${HOME}/Library/Python/3.11/bin:${PATH}";
 
@@ -50,7 +53,7 @@ PATH="${HOME}/bin:${PATH}";
 # Rust
 PATH="${HOME}/.cargo/bin:${PATH}";
 
-# Pipx
+# uv tools
 PATH="${HOME}/.local/bin:${PATH}";
 
 # BATS
@@ -61,7 +64,7 @@ PATH="${HOME}/bin:${PATH}";
 # Rust
 PATH="${HOME}/.cargo/bin:${PATH}";
 
-# Pipx
+# uv tools
 PATH="${HOME}/.local/bin:${PATH}";
 {{- end }}
 
