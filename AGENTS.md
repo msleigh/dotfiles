@@ -21,6 +21,9 @@ chezmoi edit ~/.aliases
 # Install Homebrew packages (deployed to ~/brew.sh by chezmoi)
 bash ~/brew.sh
 
+# Install command-line tools via uv (deployed to ~/uv.sh by chezmoi)
+bash ~/uv.sh
+
 # Apply macOS system defaults (requires sudo)
 bash ~/.macos
 ```
