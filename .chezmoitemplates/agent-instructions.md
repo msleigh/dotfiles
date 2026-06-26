@@ -10,6 +10,8 @@
 ## Config
 
 - Keep user name and email in local config only, never global or system.
+- ~/.gitconfig should never contain a name or email address, and is set up to
+  block commits when name and email config are missing instead of inferring.
 - Use either:
   - "Michael Sleigh" and my ECMWF work email for ECMWF work, or
   - "msleigh" and "msleigh@users.noreply.github.com" for personal work.
@@ -44,7 +46,7 @@
 
 ## General Tooling
 
-- Use Pre-commit for code quality checks and formatting.
+- Use [Pre-commit](https://pre-commit.com) for code quality checks and formatting.
 - Use Zensical for documentation.
 - Use Quarto for presentations and reports.
   - Presentations should be rendered to HTML unless otherwise requested.
@@ -54,7 +56,7 @@
 
 - Python work should always be in a virtual environment.
 - Use:
-  - uv for dependency management;
+  - uv for dependency and virtual-environment management;
   - ruff for linting and formatting;
   - pyproject.toml for project configuration;
   - pytest for testing.
@@ -81,17 +83,18 @@
 # File System
 
 - No spaces ever in file or directory names, use underscores or hyphens instead.
-- All projects should go in ~/projects.
+- All projects go in ~/projects and are named after the project.
 - Each project in ~/projects should be a Git repository.
 - Presentation files live in ~/projects/work_notes/presentations
 
 ## Dotfiles
 
 - Dotfiles are managed in a Git repository at ~/projects/dotfiles.
-- Do not edit dotfiles directly outside of this repo.
+- Do not edit dotfiles directly outside of the ~/projects/dotfiles repo.
 - User-level (as opposed to project-specific) agent instructions files such as
   AGENTS.md, CLAUDE.md, and copilot-instructions.md are also managed via
   dotfiles; do not edit versions outside that repo.
+- See ~/projects/dotfiles/AGENTS.md for more information if necessary.
 
 # IFS
 
