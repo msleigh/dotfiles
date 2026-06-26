@@ -4,8 +4,6 @@
 bin/subl
 bin/zotread
 /CLAUDE.md
-init
-init/**
 LICENSE-MIT.txt
 README.md
 uv.sh
