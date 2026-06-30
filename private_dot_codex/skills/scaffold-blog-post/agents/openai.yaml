@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scaffold Blog Post"
+  short_description: "Scaffold-only blog post setup"
+  default_prompt: "Use $scaffold-blog-post to scaffold a Markdown blog post file with headings and TODO reminders."
