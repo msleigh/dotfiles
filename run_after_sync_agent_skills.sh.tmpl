@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly HOME_DIR="{{ .chezmoi.destDir }}"
+readonly SOURCE_DIR="${HOME_DIR}/.agents/skills"
+readonly TARGET_DIRS=(
+  "${HOME_DIR}/.claude/skills"
+  "${HOME_DIR}/.codex/skills"
+  "${HOME_DIR}/.config/agents/skills"
+  "${HOME_DIR}/.config/goose/skills"
+  "${HOME_DIR}/.config/opencode/skills"
+)
+
+warn() {
+  printf 'agent-skills: %s\n' "${*}" >&2
+}
+
+same_tree() {
+  local source="${1}"
+  local target="${2}"
+
+  diff -qr "${source}" "${target}" >/dev/null 2>&1
+}
+
+link_skill() {
+  local source="${1}"
+  local target_dir="${2}"
+  local skill_name
+  local target
+
+  skill_name="$(basename "${source}")"
+  target="${target_dir}/${skill_name}"
+
+  mkdir -p "${target_dir}"
+
+  if [[ -L "${target}" ]]; then
+    ln -sfn "${source}" "${target}"
+    return
+  fi
+
+  if [[ -e "${target}" ]]; then
+    if [[ -d "${target}" ]] && same_tree "${source}" "${target}"; then
+      rm -rf "${target}"
+      ln -s "${source}" "${target}"
+    else
+      warn "${target} exists and differs from ${source}; leaving it alone."
+    fi
+    return
+  fi
+
+  ln -s "${source}" "${target}"
+}
+
+main() {
+  local skill_dir
+  local target_dir
+
+  if [[ ! -d "${SOURCE_DIR}" ]]; then
+    return
+  fi
+
+  shopt -s nullglob
+  for skill_dir in "${SOURCE_DIR}"/*; do
+    [[ -d "${skill_dir}" ]] || continue
+    [[ -f "${skill_dir}/SKILL.md" ]] || continue
+
+    for target_dir in "${TARGET_DIRS[@]}"; do
+      link_skill "${skill_dir}" "${target_dir}"
+    done
+  done
+}
+
+main "${@}"

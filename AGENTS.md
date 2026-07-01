@@ -66,6 +66,25 @@ Five files vary per machine and use Go template syntax:
 | `dot_gitconfig.tmpl` | `~/.gitconfig` | `[include]` for ifs-git-tools (work, atos) |
 | `executable_brew.sh.tmpl` | `~/brew.sh` | package list varies per machine |
 
+### Agent skills
+
+Personal agent skills live under `private_dot_agents/skills`, which deploys to
+`~/.agents/skills`. Add future skills there as one directory per skill, each
+with a `SKILL.md`.
+
+`run_after_sync_agent_skills.sh.tmpl` links every deployed skill into the
+harness-specific compatibility directories used by Claude Code, legacy Codex,
+OpenCode, and goose. The script leaves differing local directories alone
+instead of overwriting them.
+
+| Harness | Skill paths covered |
+|---|---|
+| Agent Skills clients, including Codex and goose | `~/.agents/skills` |
+| Claude Code | `~/.claude/skills` |
+| Legacy Codex | `~/.codex/skills` |
+| OpenCode | `~/.config/opencode/skills` |
+| goose compatibility | `~/.config/goose/skills`, `~/.config/agents/skills` |
+
 ### Shell configuration loading order
 
 `~/.bash_profile` sources these files in order:
