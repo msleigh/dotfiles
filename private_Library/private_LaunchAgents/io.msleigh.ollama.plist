@@ -1,9 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!--
+    LaunchAgent for Ollama, managed by chezmoi instead of `brew services`
+    (which deletes and regenerates its plist on every stop/start, losing
+    local edits). Copied from the plist the Homebrew ollama formula
+    generates, with one change:
+
+      - Label: io.msleigh.ollama (vanilla: homebrew.mxcl.ollama), so
+        `brew services` never touches this job.
+
+      - OLLAMA_CONTEXT_LENGTH: 32768 (vanilla: unset), raising the context
+        window from Ollama's default.
+
+    All other settings match the formula's service block, including both
+    of its environment variables.
+
+    Lifecycle: RunAtLoad starts the server at login; KeepAlive respawns it
+    on any exit, so `kill` won't stop it - unload with
+    `launchctl bootout gui/$(id -u)/io.msleigh.ollama`. Edits here are
+    applied by run_onchange_after_reload-ollama.sh on `chezmoi apply`.
+    Never run `brew services start ollama`: it installs a second agent
+    that fights this one for port 11434.
+-->
 <dict>
     <key>EnvironmentVariables</key>
     <dict>
+        <key>OLLAMA_CONTEXT_LENGTH</key>
+        <string>32768</string>
         <key>OLLAMA_FLASH_ATTENTION</key>
         <string>1</string>
         <key>OLLAMA_KV_CACHE_TYPE</key>
