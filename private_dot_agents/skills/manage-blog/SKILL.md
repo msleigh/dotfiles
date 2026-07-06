@@ -1,6 +1,6 @@
 ---
 name: manage-blog
-description: Inspect and preview the msleigh.io MkDocs Material blog. Use when Michael asks to list posts or drafts, show blog tags or categories, report blog statistics, preview or serve the blog locally, or validate posts before publishing. Delegates to the blog CLI; this skill is read-mostly and never commits or pushes.
+description: Inspect and preview the msleigh.io MkDocs Material blog. Use when Michael asks to list posts or drafts, show blog tags or categories, report blog statistics, preview or serve the blog locally, or validate posts before publishing. Delegates to the blog CLI; this skill is read-mostly and never commits, pushes, or writes post prose.
 ---
 
 # Manage Blog
@@ -42,6 +42,7 @@ uv run ~/projects/blog/blog.py validate --build
 
 ## House rules
 
-- Stay read-only: do not change `draft:` status, commit, or push from this skill.
+- Stay read-only: do not change `draft:` status, commit, push, or write post prose from
+  this skill. If asked to write or finish a post, route to Michael, not to this skill.
 - Prefer `--json` output when feeding results into further steps.
 - Route publishing to `publish-blog-post` and post creation to `scaffold-blog-post`.

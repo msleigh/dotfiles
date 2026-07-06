@@ -1,6 +1,6 @@
 ---
 name: publish-blog-post
-description: Publish a drafted Markdown blog post for the msleigh.io MkDocs Material blog. Use when Michael asks to publish, ship, or release a post or draft, flip a post from draft to published, or commit and push a finished post under docs/blog/posts. Delegates to the blog CLI; do not hand-edit front matter or craft git commands directly.
+description: Publish a drafted Markdown blog post for the msleigh.io MkDocs Material blog. Use when Michael asks to publish, ship, or release a post or draft, flip a post from draft to published, or commit and push a finished post under docs/blog/posts. Delegates to the blog CLI; do not hand-edit front matter or craft git commands directly. Do not write, complete, or polish the post prose.
 ---
 
 # Publish Blog Post
@@ -60,6 +60,9 @@ uv run ~/projects/blog/blog.py   # aliased to `blog` in interactive shells
 
 ## House rules
 
+- Publish posts as written. Never write, complete, or polish the prose, and never fill in
+  `TODO` placeholders — if a draft looks unfinished, flag it to Michael rather than
+  completing it. Do not mimic Michael's voice.
 - Confirm the exact post(s) with Michael before publishing.
 - Default to `--no-push`; treat pushing as an outward-facing action that needs a clear
   go-ahead.
