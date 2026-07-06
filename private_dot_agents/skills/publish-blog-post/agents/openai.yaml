@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish Blog Post"
+  short_description: "Publish a drafted blog post via the blog CLI"
+  default_prompt: "Use $publish-blog-post to validate, set draft false, commit, and (with confirmation) push a finished post."

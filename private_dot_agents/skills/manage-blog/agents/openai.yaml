@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage Blog"
+  short_description: "Inspect and preview the blog via the blog CLI"
+  default_prompt: "Use $manage-blog to list posts and drafts, show tags, categories, and stats, preview the site, or validate posts."
