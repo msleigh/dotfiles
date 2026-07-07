@@ -2,6 +2,14 @@
 
 set -euo pipefail
 
+# run_onchange_: chezmoi re-runs this only when its rendered content changes.
+# The hashes below fold every managed skill into that content, so adding,
+# removing, or editing a skill re-triggers the sync (chezmoi apply is otherwise
+# a no-op for skills). Machine-independent: keyed on skill name + SKILL.md hash.
+{{ range (glob (joinPath .chezmoi.sourceDir "private_dot_agents" "skills" "*" "SKILL.md")) -}}
+# skill: {{ dir . | base }} {{ include . | sha256sum }}
+{{ end -}}
+
 readonly HOME_DIR="{{ .chezmoi.destDir }}"
 readonly SOURCE_DIR="${HOME_DIR}/.agents/skills"
 readonly TARGET_DIRS=(
