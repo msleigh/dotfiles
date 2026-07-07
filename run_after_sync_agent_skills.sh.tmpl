@@ -23,6 +23,12 @@ same_tree() {
   diff -qr "${source}" "${target}" >/dev/null 2>&1
 }
 
+# Canonical (symlink-resolved) path of a directory, or empty if it does not
+# resolve to a real directory.
+real_dir() {
+  (cd "${1}" >/dev/null 2>&1 && pwd -P) || true
+}
+
 link_skill() {
   local source="${1}"
   local target_dir="${2}"
@@ -32,6 +38,14 @@ link_skill() {
   skill_name="$(basename "${source}")"
   target="${target_dir}/${skill_name}"
 
+  # Never operate on a target directory that resolves to the source directory
+  # itself (e.g. a legacy ~/.claude/skills -> ~/.agents/skills symlink). Doing
+  # so would make the script delete and self-link its own source skills.
+  if [[ -d "${target_dir}" && "$(real_dir "${target_dir}")" == "${SOURCE_REAL}" ]]; then
+    warn "${target_dir} resolves to the skills source; skipping to avoid clobbering it."
+    return
+  fi
+
   mkdir -p "${target_dir}"
 
   if [[ -L "${target}" ]]; then
@@ -40,7 +54,11 @@ link_skill() {
   fi
 
   if [[ -e "${target}" ]]; then
-    if [[ -d "${target}" ]] && same_tree "${source}" "${target}"; then
+    # Guard against target and source being the same real path before any
+    # destructive rm; only replace a genuinely separate, identical copy.
+    if [[ -d "${target}" ]] &&
+      [[ "$(real_dir "${target}")" != "${SOURCE_REAL}" ]] &&
+      same_tree "${source}" "${target}"; then
       rm -rf "${target}"
       ln -s "${source}" "${target}"
     else
@@ -59,6 +77,10 @@ main() {
   if [[ ! -d "${SOURCE_DIR}" ]]; then
     return
   fi
+
+  # Resolved source path, used by link_skill to refuse to clobber the source.
+  SOURCE_REAL="$(real_dir "${SOURCE_DIR}")"
+  readonly SOURCE_REAL
 
   shopt -s nullglob
   for skill_dir in "${SOURCE_DIR}"/*; do
