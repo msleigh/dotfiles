@@ -53,22 +53,38 @@ Keep every secret out of the model's view. In practice:
 
 ## Prerequisites
 
-`sitesctl` is not installed by default. Check first:
+`sitesctl` is not installed by default, so always check before running anything
+else:
 
 ```bash
 command -v sitesctl
 ```
 
-If missing, install the latest build for the platform (from
-`https://get.ecmwf.int/service/rest/repository/browse/sites-cli/`). On Linux,
-e.g. ATOS HPCF:
+If that prints nothing, the binary is missing — download it from the ECMWF
+software repository. The download endpoint returns the latest asset whose name
+matches the `q=` query, so pick the query for the platform: **`q=darwin` on
+macOS** (confirmed working, including Apple Silicon), **`q=linux` on Linux**
+(e.g. ATOS HPCF). Save it to a directory on `PATH` as `sitesctl` and make it
+executable.
+
+macOS:
+
+```bash
+curl -o ~/bin/sitesctl -L "https://get.ecmwf.int/service/rest/v1/search/assets/download?sort=name&direction=desc&q=darwin&repository=sites-cli"
+chmod +x ~/bin/sitesctl
+```
+
+Linux:
 
 ```bash
 curl -o ~/bin/sitesctl -L "https://get.ecmwf.int/service/rest/v1/search/assets/download?sort=name&direction=desc&q=linux&repository=sites-cli"
 chmod +x ~/bin/sitesctl
 ```
 
-Pick `q=macos`/`q=darwin` on a Mac. Confirm `~/bin` is on `PATH`.
+Then confirm `~/bin` is on `PATH` and re-run `command -v sitesctl`. Browse
+available builds at
+`https://get.ecmwf.int/service/rest/repository/browse/sites-cli/` if a `q=` query
+matches more than one asset and you need to narrow it (e.g. by architecture).
 
 ## Command reference
 
@@ -103,6 +119,20 @@ sitesctl site --space <space> --name <name> content delete --path <remote-path>
 # Integrity check
 sitesctl site --space <space> --name <name> content checksum --path <remote-path>
 ```
+
+**Parsing `content list -o json`.** The entries are under the top-level
+**`files`** key (an array), *not* under `data` — a payload also carries `RAW`,
+`message`, and `status` keys. Each element looks like:
+
+```json
+{"type": "f", "path": "index.html", "stats": {"size": 4445, "mtime": "2026-05-29T10:31:36Z"}}
+```
+
+`type` is `f` (file) or `d` (directory). So count entries with `.files | length`
+and iterate with `.files[]` (e.g. `jq -r '.files[].path'`). Do not reach for
+`.data` here — it is `null` for this command, which silently reads as an empty
+site. (Other commands do use a `data` field; the shape is per-command, so check
+`keys` if unsure rather than assuming.)
 
 Uploading an `index.html` at a directory turns it into that directory's landing
 page. Confirm the exact `--source`/`--path` with Michael before any upload or
