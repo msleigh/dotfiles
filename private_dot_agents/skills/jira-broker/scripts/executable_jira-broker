@@ -1,0 +1,290 @@
+#!/usr/bin/env bash
+#
+# jira-broker — credential-safe CLI for ECMWF Jira (Atlassian Data Center).
+#
+# The Personal Access Token is read from a local file at run time and handed to
+# curl through a stdin config block, so it never appears in argv, `ps` output,
+# shell history, logs, this (public) repository, or anything sent to an LLM.
+# Only the data you explicitly request is printed.
+#
+# Local config (never committed):
+#   ${XDG_CONFIG_HOME:-~/.config}/jira/config  -> line: base_url=https://jira.ecmwf.int
+#   ${XDG_CONFIG_HOME:-~/.config}/jira/pat[_*] -> file containing only the PAT (chmod 600)
+# Overrides: JIRA_BASE_URL, JIRA_PAT_FILE.
+
+set -euo pipefail
+
+readonly PROG="jira-broker"
+readonly CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/jira"
+readonly API="rest/api/2"
+
+ASSUME_YES=0
+BASE_URL=""
+PAT_FILE=""
+TMP_DIR=""
+
+die() {
+  printf '%s: %s\n' "${PROG}" "${*}" >&2
+  exit 1
+}
+
+warn() {
+  printf '%s: %s\n' "${PROG}" "${*}" >&2
+}
+
+need() {
+  command -v "${1}" >/dev/null 2>&1 || die "required command not found: ${1}"
+}
+
+cleanup() {
+  if [[ -n "${TMP_DIR}" ]]; then
+    rm -rf "${TMP_DIR}"
+  fi
+}
+
+tmp_body() {
+  [[ -n "${TMP_DIR}" ]] || TMP_DIR="$(mktemp -d)"
+  mktemp "${TMP_DIR}/body.XXXXXX"
+}
+
+file_perms() {
+  stat -c '%a' "${1}" 2>/dev/null || stat -f '%Lp' "${1}"
+}
+
+resolve_base_url() {
+  if [[ -n "${JIRA_BASE_URL:-}" ]]; then
+    printf '%s' "${JIRA_BASE_URL%/}"
+    return
+  fi
+  local cfg="${CONFIG_DIR}/config" url
+  if [[ -f "${cfg}" ]]; then
+    url="$(sed -n 's/^base_url=//p' "${cfg}" | head -n1)"
+    if [[ -n "${url}" ]]; then
+      printf '%s' "${url%/}"
+      return
+    fi
+  fi
+  die "no base URL; add 'base_url=https://jira.ecmwf.int' to ${cfg} or set JIRA_BASE_URL"
+}
+
+resolve_pat_file() {
+  if [[ -n "${JIRA_PAT_FILE:-}" ]]; then
+    [[ -f "${JIRA_PAT_FILE}" ]] || die "JIRA_PAT_FILE not found: ${JIRA_PAT_FILE}"
+    printf '%s' "${JIRA_PAT_FILE}"
+    return
+  fi
+  if [[ -f "${CONFIG_DIR}/pat" ]]; then
+    printf '%s' "${CONFIG_DIR}/pat"
+    return
+  fi
+  local f
+  for f in "${CONFIG_DIR}"/pat_*; do
+    if [[ -f "${f}" ]]; then
+      printf '%s' "${f}"
+      return
+    fi
+  done
+  die "no PAT file in ${CONFIG_DIR} (expected 'pat' or 'pat_*'); set JIRA_PAT_FILE"
+}
+
+# Resolve and validate credentials once, in the top-level shell, so a missing
+# base URL or PAT aborts cleanly (die inside a nested $(...) would not).
+preflight() {
+  local perms
+  BASE_URL="$(resolve_base_url)"
+  PAT_FILE="$(resolve_pat_file)"
+  perms="$(file_perms "${PAT_FILE}")"
+  case "${perms}" in
+  600 | 400) ;;
+  *) warn "insecure permissions ${perms} on ${PAT_FILE}; run: chmod 600 ${PAT_FILE}" ;;
+  esac
+}
+
+# Forward all arguments to curl, injecting the bearer token via a stdin config
+# block so it is never visible in the process arguments.
+curl_auth() {
+  local pat
+  pat="$(tr -d '\r\n' <"${PAT_FILE}")"
+  printf 'header = "Authorization: Bearer %s"\n' "${pat}" |
+    curl -sS --fail-with-body -K - "${@}"
+}
+
+# api METHOD PATH [extra curl args...] -> prints response body, non-zero on HTTP error
+api() {
+  local method="${1}" path="${2}"
+  shift 2
+  local out status
+  out="$(curl_auth -X "${method}" -H 'Accept: application/json' "${@}" "${BASE_URL}/${path}")" && status=0 || status=${?}
+  if [[ "${status}" -ne 0 ]]; then
+    printf '%s: request failed (%s %s):\n%s\n' "${PROG}" "${method}" "${path}" "${out}" >&2
+    return "${status}"
+  fi
+  printf '%s' "${out}"
+}
+
+require_yes() {
+  if [[ "${ASSUME_YES}" -ne 1 ]]; then
+    die "write refused without confirmation. Ask the user, then re-run with --yes: ${PROG} ${*}"
+  fi
+}
+
+cmd_whoami() {
+  api GET "${API}/myself" | jq -r '"\(.displayName) (\(.name)) <\(.emailAddress // "?")>"'
+}
+
+cmd_search() {
+  local jql="${1:?usage: search <JQL> [max]}" max="${2:-50}"
+  api GET "${API}/search" -G \
+    --data-urlencode "jql=${jql}" \
+    --data-urlencode "maxResults=${max}" \
+    --data-urlencode "fields=summary,status,assignee,issuetype,updated" |
+    jq -r '.issues[] | [.key, (.fields.status.name // "-"), (.fields.assignee.displayName // "unassigned"), (.fields.summary // "-")] | @tsv'
+}
+
+cmd_issue() {
+  local key="${1:?usage: issue <KEY>}"
+  api GET "${API}/issue/${key}" -G \
+    --data-urlencode "fields=summary,status,assignee,reporter,issuetype,priority,updated,description" |
+    jq -r '
+        "Key:      \(.key)",
+        "Type:     \(.fields.issuetype.name // "-")",
+        "Status:   \(.fields.status.name // "-")",
+        "Priority: \(.fields.priority.name // "-")",
+        "Assignee: \(.fields.assignee.displayName // "unassigned")",
+        "Reporter: \(.fields.reporter.displayName // "-")",
+        "Updated:  \(.fields.updated // "-")",
+        "Summary:  \(.fields.summary // "-")",
+        "",
+        (.fields.description // "(no description)")'
+}
+
+cmd_comments() {
+  local key="${1:?usage: comments <KEY>}"
+  api GET "${API}/issue/${key}/comment" |
+    jq -r '.comments[] | "-- \(.author.displayName) @ \(.created)\n\(.body)\n"'
+}
+
+cmd_get() {
+  local path="${1:?usage: get <api-path>   e.g. project/ABC}"
+  api GET "${API}/${path}" | jq .
+}
+
+cmd_comment() {
+  local key="${1:?usage: comment <KEY> <text>}"
+  shift
+  local text="${*:?usage: comment <KEY> <text>}"
+  require_yes "comment ${key} ${text}"
+  local body
+  body="$(tmp_body)"
+  jq -n --arg b "${text}" '{body: $b}' >"${body}"
+  api POST "${API}/issue/${key}/comment" -H 'Content-Type: application/json' --data "@${body}" |
+    jq -r '"commented on '"${key}"' (comment \(.id))"'
+}
+
+cmd_create() {
+  local proj="${1:?usage: create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]}"
+  local type="${2:?usage: create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]}"
+  local summary="${3:?usage: create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]}"
+  local desc="${4:-}"
+  require_yes "create ${type} in ${proj}: ${summary}"
+  local body out key
+  body="$(tmp_body)"
+  jq -n --arg p "${proj}" --arg t "${type}" --arg s "${summary}" --arg d "${desc}" '
+    {fields: ({project: {key: $p}, issuetype: {name: $t}, summary: $s}
+      + (if $d == "" then {} else {description: $d} end))}' >"${body}"
+  out="$(api POST "${API}/issue" -H 'Content-Type: application/json' --data "@${body}")"
+  key="$(printf '%s' "${out}" | jq -r '.key')"
+  printf 'created %s: %s/browse/%s\n' "${key}" "${BASE_URL}" "${key}"
+}
+
+cmd_transition() {
+  local key="${1:?usage: transition <KEY> <TRANSITION-NAME>}"
+  local name="${2:?usage: transition <KEY> <TRANSITION-NAME>}"
+  require_yes "transition ${key} -> ${name}"
+  local tid body
+  tid="$(api GET "${API}/issue/${key}/transitions" |
+    jq -r --arg n "${name}" '.transitions[] | select(.name | ascii_downcase == ($n | ascii_downcase)) | .id' | head -n1)"
+  [[ -n "${tid}" ]] || die "no transition named '${name}' available for ${key}"
+  body="$(tmp_body)"
+  jq -n --arg id "${tid}" '{transition: {id: $id}}' >"${body}"
+  api POST "${API}/issue/${key}/transitions" -H 'Content-Type: application/json' --data "@${body}" >/dev/null
+  printf 'transitioned %s -> %s\n' "${key}" "${name}"
+}
+
+cmd_assign() {
+  local key="${1:?usage: assign <KEY> <USERNAME>}"
+  local user="${2:?usage: assign <KEY> <USERNAME>}"
+  require_yes "assign ${key} to ${user}"
+  local body
+  body="$(tmp_body)"
+  jq -n --arg u "${user}" '{name: $u}' >"${body}"
+  api PUT "${API}/issue/${key}/assignee" -H 'Content-Type: application/json' --data "@${body}" >/dev/null
+  printf 'assigned %s to %s\n' "${key}" "${user}"
+}
+
+usage() {
+  cat <<EOF
+${PROG} — ECMWF Jira (Data Center) broker. Token stays local; never sent to the LLM.
+
+Read:
+  ${PROG} whoami                         test auth; show current user
+  ${PROG} search "<JQL>" [max]           search issues (TSV: key status assignee summary)
+  ${PROG} issue <KEY>                     show one issue with description
+  ${PROG} comments <KEY>                  list comments on an issue
+  ${PROG} get <api-path>                  raw GET under ${API}/ (e.g. get project/ABC)
+
+Write (require --yes after user confirmation):
+  ${PROG} --yes comment <KEY> <text>
+  ${PROG} --yes create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]
+  ${PROG} --yes transition <KEY> <TRANSITION-NAME>
+  ${PROG} --yes assign <KEY> <USERNAME>
+
+Config: base_url in ${CONFIG_DIR}/config; PAT in ${CONFIG_DIR}/pat[_*] (chmod 600).
+EOF
+}
+
+main() {
+  need curl
+  need jq
+  trap cleanup EXIT
+
+  local -a rest=()
+  local a
+  for a in "${@}"; do
+    case "${a}" in
+    -y | --yes) ASSUME_YES=1 ;;
+    *) rest+=("${a}") ;;
+    esac
+  done
+  if [[ "${#rest[@]}" -gt 0 ]]; then
+    set -- "${rest[@]}"
+  else
+    set --
+  fi
+
+  local cmd="${1:-help}"
+  [[ "${#}" -gt 0 ]] && shift
+
+  case "${cmd}" in
+  help | -h | --help)
+    usage
+    return 0
+    ;;
+  esac
+
+  preflight
+  case "${cmd}" in
+  whoami | myself) cmd_whoami ;;
+  search) cmd_search "${@}" ;;
+  issue) cmd_issue "${@}" ;;
+  comments) cmd_comments "${@}" ;;
+  get) cmd_get "${@}" ;;
+  comment) cmd_comment "${@}" ;;
+  create) cmd_create "${@}" ;;
+  transition) cmd_transition "${@}" ;;
+  assign) cmd_assign "${@}" ;;
+  *) die "unknown command: ${cmd} (try: ${PROG} help)" ;;
+  esac
+}
+
+main "${@}"
