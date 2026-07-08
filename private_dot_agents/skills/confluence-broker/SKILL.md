@@ -7,6 +7,9 @@ description: Read and edit ECMWF Confluence (Data Center) through a local broker
 
 ## Overview
 
+This skill only loads guidance; it does not fetch anything itself. To read or
+write Confluence you must then run the broker CLI via Bash (see **Invocation**).
+
 `confluence-broker` is a small Bash CLI that talks to ECMWF Confluence
 (`confluence.ecmwf.int`, Atlassian Data Center) over its REST API. It exists so
 an agent can work with Confluence **without ever handling the credential**: the

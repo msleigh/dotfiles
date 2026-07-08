@@ -7,6 +7,9 @@ description: Query and update ECMWF Jira (Data Center) through a local broker CL
 
 ## Overview
 
+This skill only loads guidance; it does not fetch anything itself. To read or
+write Jira you must then run the broker CLI via Bash (see **Invocation**).
+
 `jira-broker` is a small Bash CLI that talks to ECMWF Jira (`jira.ecmwf.int`,
 Atlassian Data Center) over its REST API. It exists so an agent can work with
 Jira **without ever handling the credential**: the Personal Access Token is read
