@@ -1,0 +1,307 @@
+#!/usr/bin/env bash
+#
+# confluence-broker — credential-safe CLI for ECMWF Confluence (Atlassian Data Center).
+#
+# The Personal Access Token is read from a local file at run time and handed to
+# curl through a stdin config block, so it never appears in argv, `ps` output,
+# shell history, logs, this (public) repository, or anything sent to an LLM.
+# Only the data you explicitly request is printed.
+#
+# Local config (never committed):
+#   ${XDG_CONFIG_HOME:-~/.config}/confluence/config  -> line: base_url=https://confluence.ecmwf.int
+#   ${XDG_CONFIG_HOME:-~/.config}/confluence/pat[_*] -> file containing only the PAT (chmod 600)
+# Overrides: CONFLUENCE_BASE_URL, CONFLUENCE_PAT_FILE.
+#
+# Page bodies for create/update/comment are Confluence "storage format" (XHTML).
+# A body argument may be a literal string, a path to a file, or "-" for stdin.
+
+set -euo pipefail
+
+readonly PROG="confluence-broker"
+readonly CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/confluence"
+readonly API="rest/api"
+
+ASSUME_YES=0
+BASE_URL=""
+PAT_FILE=""
+TMP_DIR=""
+
+die() {
+  printf '%s: %s\n' "${PROG}" "${*}" >&2
+  exit 1
+}
+
+warn() {
+  printf '%s: %s\n' "${PROG}" "${*}" >&2
+}
+
+need() {
+  command -v "${1}" >/dev/null 2>&1 || die "required command not found: ${1}"
+}
+
+cleanup() {
+  if [[ -n "${TMP_DIR}" ]]; then
+    rm -rf "${TMP_DIR}"
+  fi
+}
+
+tmp_body() {
+  [[ -n "${TMP_DIR}" ]] || TMP_DIR="$(mktemp -d)"
+  mktemp "${TMP_DIR}/body.XXXXXX"
+}
+
+file_perms() {
+  stat -c '%a' "${1}" 2>/dev/null || stat -f '%Lp' "${1}"
+}
+
+read_source() {
+  local src="${1}"
+  if [[ "${src}" == "-" ]]; then
+    cat
+  elif [[ -f "${src}" ]]; then
+    cat "${src}"
+  else
+    printf '%s' "${src}"
+  fi
+}
+
+resolve_base_url() {
+  if [[ -n "${CONFLUENCE_BASE_URL:-}" ]]; then
+    printf '%s' "${CONFLUENCE_BASE_URL%/}"
+    return
+  fi
+  local cfg="${CONFIG_DIR}/config" url
+  if [[ -f "${cfg}" ]]; then
+    url="$(sed -n 's/^base_url=//p' "${cfg}" | head -n1)"
+    if [[ -n "${url}" ]]; then
+      printf '%s' "${url%/}"
+      return
+    fi
+  fi
+  die "no base URL; add 'base_url=https://confluence.ecmwf.int' to ${cfg} or set CONFLUENCE_BASE_URL"
+}
+
+resolve_pat_file() {
+  if [[ -n "${CONFLUENCE_PAT_FILE:-}" ]]; then
+    [[ -f "${CONFLUENCE_PAT_FILE}" ]] || die "CONFLUENCE_PAT_FILE not found: ${CONFLUENCE_PAT_FILE}"
+    printf '%s' "${CONFLUENCE_PAT_FILE}"
+    return
+  fi
+  if [[ -f "${CONFIG_DIR}/pat" ]]; then
+    printf '%s' "${CONFIG_DIR}/pat"
+    return
+  fi
+  local f
+  for f in "${CONFIG_DIR}"/pat_*; do
+    if [[ -f "${f}" ]]; then
+      printf '%s' "${f}"
+      return
+    fi
+  done
+  die "no PAT file in ${CONFIG_DIR} (expected 'pat' or 'pat_*'); set CONFLUENCE_PAT_FILE"
+}
+
+# Resolve and validate credentials once, in the top-level shell, so a missing
+# base URL or PAT aborts cleanly (die inside a nested $(...) would not).
+preflight() {
+  local perms
+  BASE_URL="$(resolve_base_url)"
+  PAT_FILE="$(resolve_pat_file)"
+  perms="$(file_perms "${PAT_FILE}")"
+  case "${perms}" in
+  600 | 400) ;;
+  *) warn "insecure permissions ${perms} on ${PAT_FILE}; run: chmod 600 ${PAT_FILE}" ;;
+  esac
+}
+
+# Forward all arguments to curl, injecting the bearer token via a stdin config
+# block so it is never visible in the process arguments.
+curl_auth() {
+  local pat
+  pat="$(tr -d '\r\n' <"${PAT_FILE}")"
+  printf 'header = "Authorization: Bearer %s"\n' "${pat}" |
+    curl -sS --fail-with-body -K - "${@}"
+}
+
+# api METHOD PATH [extra curl args...] -> prints response body, non-zero on HTTP error
+api() {
+  local method="${1}" path="${2}"
+  shift 2
+  local out status
+  out="$(curl_auth -X "${method}" -H 'Accept: application/json' "${@}" "${BASE_URL}/${path}")" && status=0 || status=${?}
+  if [[ "${status}" -ne 0 ]]; then
+    printf '%s: request failed (%s %s):\n%s\n' "${PROG}" "${method}" "${path}" "${out}" >&2
+    return "${status}"
+  fi
+  printf '%s' "${out}"
+}
+
+require_yes() {
+  if [[ "${ASSUME_YES}" -ne 1 ]]; then
+    die "write refused without confirmation. Ask the user, then re-run with --yes: ${PROG} ${*}"
+  fi
+}
+
+cmd_whoami() {
+  api GET "${API}/user/current" | jq -r '"\(.displayName) (\(.username // .userKey // "?"))"'
+}
+
+cmd_search() {
+  local cql="${1:?usage: search <CQL> [limit]}" limit="${2:-25}"
+  api GET "${API}/content/search" -G \
+    --data-urlencode "cql=${cql}" \
+    --data-urlencode "limit=${limit}" \
+    --data-urlencode "expand=space" |
+    jq -r '.results[] | [.id, .type, (.space.key // "-"), .title] | @tsv'
+}
+
+cmd_page() {
+  local id="${1:?usage: page <ID>}"
+  api GET "${API}/content/${id}" -G --data-urlencode "expand=body.storage,version,space" |
+    jq -r '
+        "ID:      \(.id)",
+        "Title:   \(.title)",
+        "Space:   \(.space.key // "-")",
+        "Version: \(.version.number // "-")",
+        "",
+        (.body.storage.value // "(no body)")'
+}
+
+cmd_find() {
+  local space="${1:?usage: find <SPACE> <TITLE>}" title="${2:?usage: find <SPACE> <TITLE>}"
+  api GET "${API}/content" -G \
+    --data-urlencode "spaceKey=${space}" \
+    --data-urlencode "title=${title}" \
+    --data-urlencode "expand=body.storage,version" |
+    jq -r '.results[0] // {} |
+        if .id then
+          "ID:      \(.id)", "Title:   \(.title)", "Version: \(.version.number)", "", (.body.storage.value // "")
+        else "not found" end'
+}
+
+cmd_children() {
+  local id="${1:?usage: children <ID>}"
+  api GET "${API}/content/${id}/child/page" -G --data-urlencode "limit=100" |
+    jq -r '.results[] | [.id, .title] | @tsv'
+}
+
+cmd_get() {
+  local path="${1:?usage: get <api-path>   e.g. space/DOCS}"
+  api GET "${API}/${path}" | jq .
+}
+
+cmd_create() {
+  local space="${1:?usage: create <SPACE> <TITLE> <body|file|-> [PARENT-ID]}"
+  local title="${2:?usage: create <SPACE> <TITLE> <body|file|-> [PARENT-ID]}"
+  local src="${3:?usage: create <SPACE> <TITLE> <body|file|-> [PARENT-ID]}"
+  local parent="${4:-}"
+  require_yes "create page '${title}' in ${space}"
+  local content body
+  content="$(read_source "${src}")"
+  body="$(tmp_body)"
+  jq -n --arg sp "${space}" --arg t "${title}" --arg v "${content}" --arg par "${parent}" '
+    {type: "page", title: $t, space: {key: $sp},
+     body: {storage: {value: $v, representation: "storage"}}}
+    + (if $par == "" then {} else {ancestors: [{id: $par}]} end)' >"${body}"
+  api POST "${API}/content" -H 'Content-Type: application/json' --data "@${body}" |
+    jq -r '"created \(.id): \(._links.base // "")\(._links.webui // "")"'
+}
+
+cmd_update() {
+  local id="${1:?usage: update <ID> <body|file|->}"
+  local src="${2:?usage: update <ID> <body|file|->}"
+  require_yes "update page ${id}"
+  local meta ver title content body
+  meta="$(api GET "${API}/content/${id}" -G --data-urlencode "expand=version")"
+  ver="$(printf '%s' "${meta}" | jq -r '.version.number')"
+  title="$(printf '%s' "${meta}" | jq -r '.title')"
+  [[ "${ver}" =~ ^[0-9]+$ ]] || die "could not read current version of ${id}"
+  content="$(read_source "${src}")"
+  body="$(tmp_body)"
+  jq -n --arg t "${title}" --arg v "${content}" --argjson n "$((ver + 1))" '
+    {type: "page", title: $t, version: {number: $n},
+     body: {storage: {value: $v, representation: "storage"}}}' >"${body}"
+  api PUT "${API}/content/${id}" -H 'Content-Type: application/json' --data "@${body}" |
+    jq -r '"updated \(.id) to v\(.version.number)"'
+}
+
+cmd_comment() {
+  local id="${1:?usage: comment <ID> <text>}"
+  shift
+  local text="${*:?usage: comment <ID> <text>}"
+  require_yes "comment on ${id}"
+  local body
+  body="$(tmp_body)"
+  jq -n --arg c "${id}" --arg v "${text}" '
+    {type: "comment", container: {id: $c, type: "page"},
+     body: {storage: {value: $v, representation: "storage"}}}' >"${body}"
+  api POST "${API}/content" -H 'Content-Type: application/json' --data "@${body}" |
+    jq -r '"commented on \(.container.id) (comment \(.id))"'
+}
+
+usage() {
+  cat <<EOF
+${PROG} — ECMWF Confluence (Data Center) broker. Token stays local; never sent to the LLM.
+
+Read:
+  ${PROG} whoami                          test auth; show current user
+  ${PROG} search "<CQL>" [limit]          search content (TSV: id type space title)
+  ${PROG} page <ID>                        show a page (metadata + storage-format body)
+  ${PROG} find <SPACE> <TITLE>             fetch a page by space key and exact title
+  ${PROG} children <ID>                    list child pages (TSV: id title)
+  ${PROG} get <api-path>                   raw GET under ${API}/ (e.g. get space/DOCS)
+
+Write (require --yes after user confirmation; body = literal, file path, or -):
+  ${PROG} --yes create <SPACE> <TITLE> <body|file|-> [PARENT-ID]
+  ${PROG} --yes update <ID> <body|file|->
+  ${PROG} --yes comment <ID> <text>
+
+Config: base_url in ${CONFIG_DIR}/config; PAT in ${CONFIG_DIR}/pat[_*] (chmod 600).
+EOF
+}
+
+main() {
+  need curl
+  need jq
+  trap cleanup EXIT
+
+  local -a rest=()
+  local a
+  for a in "${@}"; do
+    case "${a}" in
+    -y | --yes) ASSUME_YES=1 ;;
+    *) rest+=("${a}") ;;
+    esac
+  done
+  if [[ "${#rest[@]}" -gt 0 ]]; then
+    set -- "${rest[@]}"
+  else
+    set --
+  fi
+
+  local cmd="${1:-help}"
+  [[ "${#}" -gt 0 ]] && shift
+
+  case "${cmd}" in
+  help | -h | --help)
+    usage
+    return 0
+    ;;
+  esac
+
+  preflight
+  case "${cmd}" in
+  whoami | current) cmd_whoami ;;
+  search) cmd_search "${@}" ;;
+  page) cmd_page "${@}" ;;
+  find) cmd_find "${@}" ;;
+  children) cmd_children "${@}" ;;
+  get) cmd_get "${@}" ;;
+  create) cmd_create "${@}" ;;
+  update) cmd_update "${@}" ;;
+  comment) cmd_comment "${@}" ;;
+  *) die "unknown command: ${cmd} (try: ${PROG} help)" ;;
+  esac
+}
+
+main "${@}"
