@@ -47,6 +47,17 @@ Write (require `--yes`, only after the user confirms):
 - `jira-broker --yes transition <KEY> <TRANSITION-NAME>`
 - `jira-broker --yes assign <KEY> <USERNAME>`
 
+Issue creation accepts comma-separated field values through
+`JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.
+For example:
+
+```bash
+JIRA_COMPONENTS='Forecast' \
+JIRA_FIX_VERSIONS='Cy50r1' \
+JIRA_IFS_PARTS_AFFECTED='Dynamics,Physics' \
+  jira-broker --yes create IFS Task 'Summary' 'Description'
+```
+
 ## Agent guidance
 
 - **Reads are safe**; run them freely to answer questions.
@@ -54,6 +65,9 @@ Write (require `--yes`, only after the user confirms):
   Always describe the exact change to the user and get explicit approval before
   adding `--yes`. Never pass `--yes` speculatively.
 - Prefer `search` with a focused JQL over fetching many issues individually.
+- IFS tickets require **Component**, **Fix Version**, and **IFS Parts Affected**.
+  Before proposing or creating one, determine all three values and pass them via
+  `JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.
 - For fields or endpoints the wrapper does not expose, use `get <api-path>` and
   parse the JSON.
 - If a command reports "no PAT file" or "no base URL", the user needs to

@@ -95,8 +95,8 @@ preflight() {
   PAT_FILE="$(resolve_pat_file)"
   perms="$(file_perms "${PAT_FILE}")"
   case "${perms}" in
-  600 | 400) ;;
-  *) warn "insecure permissions ${perms} on ${PAT_FILE}; run: chmod 600 ${PAT_FILE}" ;;
+    600 | 400) ;;
+    *) warn "insecure permissions ${perms} on ${PAT_FILE}; run: chmod 600 ${PAT_FILE}" ;;
   esac
 }
 
@@ -114,7 +114,7 @@ api() {
   local method="${1}" path="${2}"
   shift 2
   local out status
-  out="$(curl_auth -X "${method}" -H 'Accept: application/json' "${@}" "${BASE_URL}/${path}")" && status=0 || status=${?}
+  out="$(curl_auth -X "${method}" -H 'Accept: application/json' -H 'X-Atlassian-Token: no-check' "${@}" "${BASE_URL}/${path}")" && status=0 || status=${?}
   if [[ "${status}" -ne 0 ]]; then
     printf '%s: request failed (%s %s):\n%s\n' "${PROG}" "${method}" "${path}" "${out}" >&2
     return "${status}"
@@ -186,12 +186,24 @@ cmd_create() {
   local type="${2:?usage: create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]}"
   local summary="${3:?usage: create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]}"
   local desc="${4:-}"
+  if [[ "${proj}" == "IFS" ]]; then
+    [[ -n "${JIRA_COMPONENTS:-}" ]] || die "creating IFS tickets requires JIRA_COMPONENTS"
+    [[ -n "${JIRA_FIX_VERSIONS:-}" ]] || die "creating IFS tickets requires JIRA_FIX_VERSIONS"
+    [[ -n "${JIRA_IFS_PARTS_AFFECTED:-}" ]] || die "creating IFS tickets requires JIRA_IFS_PARTS_AFFECTED"
+  fi
   require_yes "create ${type} in ${proj}: ${summary}"
   local body out key
   body="$(tmp_body)"
-  jq -n --arg p "${proj}" --arg t "${type}" --arg s "${summary}" --arg d "${desc}" '
+  jq -n --arg p "${proj}" --arg t "${type}" --arg s "${summary}" --arg d "${desc}" \
+    --arg comps "${JIRA_COMPONENTS:-}" --arg vers "${JIRA_FIX_VERSIONS:-}" \
+    --arg parts "${JIRA_IFS_PARTS_AFFECTED:-}" '
+    def csv2objs($s): ($s | split(",") | map(gsub("^ +| +$";"")) | map(select(length>0) | {name: .}));
+    def csv2values($s): ($s | split(",") | map(gsub("^ +| +$";"")) | map(select(length>0) | {value: .}));
     {fields: ({project: {key: $p}, issuetype: {name: $t}, summary: $s}
-      + (if $d == "" then {} else {description: $d} end))}' >"${body}"
+      + (if $d == "" then {} else {description: $d} end)
+      + (if $comps == "" then {} else {components: csv2objs($comps)} end)
+      + (if $vers == "" then {} else {fixVersions: csv2objs($vers)} end)
+      + (if $parts == "" then {} else {customfield_12111: csv2values($parts)} end))}' >"${body}"
   out="$(api POST "${API}/issue" -H 'Content-Type: application/json' --data "@${body}")"
   key="$(printf '%s' "${out}" | jq -r '.key')"
   printf 'created %s: %s/browse/%s\n' "${key}" "${BASE_URL}" "${key}"
@@ -240,6 +252,7 @@ Write (require --yes after user confirmation):
   ${PROG} --yes assign <KEY> <USERNAME>
 
 Config: base_url in ${CONFIG_DIR}/config; PAT in ${CONFIG_DIR}/pat[_*] (chmod 600).
+Create fields: JIRA_COMPONENTS, JIRA_FIX_VERSIONS, JIRA_IFS_PARTS_AFFECTED (comma-separated).
 EOF
 }
 
@@ -252,8 +265,8 @@ main() {
   local a
   for a in "${@}"; do
     case "${a}" in
-    -y | --yes) ASSUME_YES=1 ;;
-    *) rest+=("${a}") ;;
+      -y | --yes) ASSUME_YES=1 ;;
+      *) rest+=("${a}") ;;
     esac
   done
   if [[ "${#rest[@]}" -gt 0 ]]; then
@@ -266,24 +279,24 @@ main() {
   [[ "${#}" -gt 0 ]] && shift
 
   case "${cmd}" in
-  help | -h | --help)
-    usage
-    return 0
-    ;;
+    help | -h | --help)
+      usage
+      return 0
+      ;;
   esac
 
   preflight
   case "${cmd}" in
-  whoami | myself) cmd_whoami ;;
-  search) cmd_search "${@}" ;;
-  issue) cmd_issue "${@}" ;;
-  comments) cmd_comments "${@}" ;;
-  get) cmd_get "${@}" ;;
-  comment) cmd_comment "${@}" ;;
-  create) cmd_create "${@}" ;;
-  transition) cmd_transition "${@}" ;;
-  assign) cmd_assign "${@}" ;;
-  *) die "unknown command: ${cmd} (try: ${PROG} help)" ;;
+    whoami | myself) cmd_whoami ;;
+    search) cmd_search "${@}" ;;
+    issue) cmd_issue "${@}" ;;
+    comments) cmd_comments "${@}" ;;
+    get) cmd_get "${@}" ;;
+    comment) cmd_comment "${@}" ;;
+    create) cmd_create "${@}" ;;
+    transition) cmd_transition "${@}" ;;
+    assign) cmd_assign "${@}" ;;
+    *) die "unknown command: ${cmd} (try: ${PROG} help)" ;;
   esac
 }
 
