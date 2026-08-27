@@ -1,9 +1,9 @@
-/AGENTS.md
+AGENTS.md
 .gitignore
 .pre-commit-config.yaml
 bin/subl
 bin/zotread
-/CLAUDE.md
+CLAUDE.md
 LICENSE-MIT.txt
 README.md
 {{ if ne .chezmoi.os "darwin" -}}
