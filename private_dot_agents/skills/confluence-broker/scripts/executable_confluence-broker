@@ -211,15 +211,17 @@ cmd_update() {
   local id="${1:?usage: update <ID> <body|file|->}"
   local src="${2:?usage: update <ID> <body|file|->}"
   require_yes "update page ${id}"
-  local meta ver title content body
+  local meta ver title type content body
   meta="$(api GET "${API}/content/${id}" -G --data-urlencode "expand=version")"
   ver="$(printf '%s' "${meta}" | jq -r '.version.number')"
   title="$(printf '%s' "${meta}" | jq -r '.title')"
+  type="$(printf '%s' "${meta}" | jq -r '.type')"
   [[ "${ver}" =~ ^[0-9]+$ ]] || die "could not read current version of ${id}"
+  [[ -n "${type}" && "${type}" != "null" ]] || die "could not read content type of ${id}"
   content="$(read_source "${src}")"
   body="$(tmp_body)"
-  jq -n --arg t "${title}" --arg v "${content}" --argjson n "$((ver + 1))" '
-    {type: "page", title: $t, version: {number: $n},
+  jq -n --arg t "${title}" --arg v "${content}" --arg ty "${type}" --argjson n "$((ver + 1))" '
+    {type: $ty, title: $t, version: {number: $n},
      body: {storage: {value: $v, representation: "storage"}}}' >"${body}"
   api PUT "${API}/content/${id}" -H 'Content-Type: application/json' --data "@${body}" |
     jq -r '"updated \(.id) to v\(.version.number)"'
