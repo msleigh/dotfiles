@@ -24,6 +24,9 @@ bash ~/brew.sh
 # Install command-line tools via uv (deployed to ~/uv.sh by chezmoi)
 bash ~/uv.sh
 
+# Install Quarto on the atos Linux machine (deployed to ~/quarto.sh)
+bash ~/quarto.sh
+
 # Apply macOS system defaults (requires sudo)
 bash ~/.macos
 ```
@@ -56,7 +59,7 @@ This file is never committed. chezmoi reads `.machine` from it when rendering te
 
 ### Templated files
 
-Five files vary per machine and use Go template syntax:
+Six files vary per machine and use Go template syntax:
 
 | Source file | Deployed as | Varies by machine |
 |---|---|---|
@@ -64,7 +67,8 @@ Five files vary per machine and use Go template syntax:
 | `dot_exports.tmpl` | `~/.exports` | `$PERM` variable (work only) |
 | `dot_aliases.tmpl` | `~/.aliases` | `pn` alias (work), `prun` alias (atos) |
 | `dot_gitconfig.tmpl` | `~/.gitconfig` | `[include]` for ifs-git-tools (work, atos) |
-| `executable_brew.sh.tmpl` | `~/brew.sh` | package list varies per machine |
+| `executable_brew.sh.tmpl` | `~/brew.sh` | package list varies per machine; macOS installs Quarto with Homebrew |
+| `executable_quarto.sh.tmpl` | `~/quarto.sh` | installs the latest Linux x86_64 Quarto tarball on atos without sudo |
 
 ### Agent skills
 

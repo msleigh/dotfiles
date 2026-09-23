@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+{{- if ne .machine "atos" }}
+echo "quarto.sh: only used for the atos machine; skipping." >&2
+exit 0
+{{- else }}
+# Install the latest Quarto release for this user, without requiring sudo.
+QUARTO_VERSION=$(curl -fsSL https://api.github.com/repos/quarto-dev/quarto-cli/releases/latest | python3 -c 'import json, sys; print(json.load(sys.stdin)["tag_name"].lstrip("v"))')
+case "$(uname -m)" in
+  x86_64) QUARTO_ARCH="amd64" ;;
+  aarch64) QUARTO_ARCH="arm64" ;;
+  *) echo "quarto.sh: unsupported Linux architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+QUARTO_ARCHIVE="quarto-${QUARTO_VERSION}-linux-${QUARTO_ARCH}.tar.gz"
+QUARTO_URL="https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/${QUARTO_ARCHIVE}"
+QUARTO_INSTALL_DIR="${HOME}/.local/opt/quarto-${QUARTO_VERSION}"
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf "${TEMP_DIR}"' EXIT
+
+curl -fL "${QUARTO_URL}" -o "${TEMP_DIR}/${QUARTO_ARCHIVE}"
+mkdir -p "${HOME}/.local/opt" "${HOME}/.local/bin"
+tar -xzf "${TEMP_DIR}/${QUARTO_ARCHIVE}" -C "${HOME}/.local/opt"
+ln -sfn "${QUARTO_INSTALL_DIR}/bin/quarto" "${HOME}/.local/bin/quarto"
+{{- end }}
