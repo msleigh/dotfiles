@@ -1,6 +1,6 @@
 ---
 name: jira-broker
-description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when Michael asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, transition, or assign issues.
+description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, transition, or assign issues.
 ---
 
 # Jira Broker
@@ -14,21 +14,23 @@ write Jira you must then run the broker CLI via Bash (see **Invocation**).
 Atlassian Data Center) over its REST API. It exists so an agent can work with
 Jira **without ever handling the credential**: the Personal Access Token is read
 from a local file at run time and passed to `curl` via a stdin config block, so
-it never appears in command arguments, `ps`, shell history, logs, this public
-repository, or anything sent to the model. Only the data you explicitly request
-is returned.
+it never appears in command arguments, `ps`, shell history, logs, source
+control, or anything sent to the model. Only the data you explicitly request is
+returned.
 
 Content of the issues you fetch *is* returned to the agent (that is the point of
 reading them); only the token is kept local.
 
 ## Invocation
 
-The executable is `scripts/jira-broker` inside this skill directory (deployed
-copy: `~/.agents/skills/jira-broker/scripts/jira-broker`). Run it directly, e.g.:
+The executable is `scripts/jira-broker` inside this skill directory. Run it by
+its full path, e.g.:
 
 ```bash
-scripts/jira-broker whoami
+<skill-dir>/scripts/jira-broker whoami
 ```
+
+It requires `bash`, `curl` (7.76 or later), and `jq`.
 
 ## Commands
 
@@ -70,21 +72,23 @@ JIRA_IFS_PARTS_AFFECTED='Dynamics,Physics' \
   `JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.
 - For fields or endpoints the wrapper does not expose, use `get <api-path>` and
   parse the JSON.
-- If a command reports "no PAT file" or "no base URL", the user needs to
-  complete the one-time setup below — do not attempt to work around it.
+- If a command reports "no PAT file", the user needs to complete the one-time
+  setup below — do not attempt to work around it.
 
 ## One-time setup (done by the user, not committed)
 
-1. Base URL (already set by dotfiles):
-   `~/.config/jira/config` contains `base_url=https://jira.ecmwf.int`.
-2. Personal Access Token: create one in Jira (Profile → Personal Access Tokens),
+1. Personal Access Token: create one in Jira (Profile → Personal Access Tokens),
    then save the raw token (no surrounding whitespace) to a local file and lock
    it down:
 
    ```bash
+   mkdir -p ~/.config/jira
    printf '%s' '<token>' > ~/.config/jira/pat_$(hostname -s)
    chmod 600 ~/.config/jira/pat_*
    ```
 
    The broker reads `~/.config/jira/pat` or the first `pat_*` file it finds, or
    the path in `JIRA_PAT_FILE`. Never commit these files.
+2. Base URL (optional): defaults to `https://jira.ecmwf.int`. To use another
+   instance, set `JIRA_BASE_URL` or add `base_url=<url>` to
+   `~/.config/jira/config`.

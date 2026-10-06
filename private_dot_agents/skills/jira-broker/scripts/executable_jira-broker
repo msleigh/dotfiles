@@ -4,18 +4,20 @@
 #
 # The Personal Access Token is read from a local file at run time and handed to
 # curl through a stdin config block, so it never appears in argv, `ps` output,
-# shell history, logs, this (public) repository, or anything sent to an LLM.
+# shell history, logs, source control, or anything sent to an LLM.
 # Only the data you explicitly request is printed.
 #
 # Local config (never committed):
-#   ${XDG_CONFIG_HOME:-~/.config}/jira/config  -> line: base_url=https://jira.ecmwf.int
 #   ${XDG_CONFIG_HOME:-~/.config}/jira/pat[_*] -> file containing only the PAT (chmod 600)
+#   ${XDG_CONFIG_HOME:-~/.config}/jira/config  -> optional line: base_url=<url>
 # Overrides: JIRA_BASE_URL, JIRA_PAT_FILE.
+# Base URL defaults to https://jira.ecmwf.int.
 
 set -euo pipefail
 
 readonly PROG="jira-broker"
 readonly CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/jira"
+readonly DEFAULT_BASE_URL="https://jira.ecmwf.int"
 readonly API="rest/api/2"
 
 ASSUME_YES=0
@@ -64,7 +66,7 @@ resolve_base_url() {
       return
     fi
   fi
-  die "no base URL; add 'base_url=https://jira.ecmwf.int' to ${cfg} or set JIRA_BASE_URL"
+  printf '%s' "${DEFAULT_BASE_URL}"
 }
 
 resolve_pat_file() {
@@ -88,7 +90,7 @@ resolve_pat_file() {
 }
 
 # Resolve and validate credentials once, in the top-level shell, so a missing
-# base URL or PAT aborts cleanly (die inside a nested $(...) would not).
+# PAT aborts cleanly (die inside a nested $(...) would not).
 preflight() {
   local perms
   BASE_URL="$(resolve_base_url)"
@@ -251,7 +253,8 @@ Write (require --yes after user confirmation):
   ${PROG} --yes transition <KEY> <TRANSITION-NAME>
   ${PROG} --yes assign <KEY> <USERNAME>
 
-Config: base_url in ${CONFIG_DIR}/config; PAT in ${CONFIG_DIR}/pat[_*] (chmod 600).
+Config: PAT in ${CONFIG_DIR}/pat[_*] (chmod 600); optional base_url in ${CONFIG_DIR}/config
+        (default ${DEFAULT_BASE_URL}).
 Create fields: JIRA_COMPONENTS, JIRA_FIX_VERSIONS, JIRA_IFS_PARTS_AFFECTED (comma-separated).
 EOF
 }
