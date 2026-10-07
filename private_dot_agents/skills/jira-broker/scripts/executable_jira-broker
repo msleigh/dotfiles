@@ -20,6 +20,14 @@ readonly CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/jira"
 readonly DEFAULT_BASE_URL="https://jira.ecmwf.int"
 readonly API="rest/api/2"
 
+# jq helpers: split a comma-separated list; render a field value for display.
+readonly JQ_CSV='def csv: split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0));'
+readonly JQ_SHOW='def show:
+  if type == "array" then (if length == 0 then "(none)" else map(show) | join(", ") end)
+  elif type == "object" then (.name // .value // .displayName // .key // tostring)
+  elif . == null then "(none)"
+  else tostring end;'
+
 ASSUME_YES=0
 BASE_URL=""
 PAT_FILE=""
@@ -130,6 +138,15 @@ require_yes() {
   fi
 }
 
+# Single-quote an argument for display if it contains anything but safe characters.
+shell_quote() {
+  if [[ "${1}" =~ ^[A-Za-z0-9_.,/:=+-]+$ ]]; then
+    printf '%s' "${1}"
+  else
+    printf "'%s'" "${1//\'/\'\\\'\'}"
+  fi
+}
+
 cmd_whoami() {
   api GET "${API}/myself" | jq -r '"\(.displayName) (\(.name)) <\(.emailAddress // "?")>"'
 }
@@ -146,16 +163,19 @@ cmd_search() {
 cmd_issue() {
   local key="${1:?usage: issue <KEY>}"
   api GET "${API}/issue/${key}" -G \
-    --data-urlencode "fields=summary,status,assignee,reporter,issuetype,priority,updated,description" |
-    jq -r '
-        "Key:      \(.key)",
-        "Type:     \(.fields.issuetype.name // "-")",
-        "Status:   \(.fields.status.name // "-")",
-        "Priority: \(.fields.priority.name // "-")",
-        "Assignee: \(.fields.assignee.displayName // "unassigned")",
-        "Reporter: \(.fields.reporter.displayName // "-")",
-        "Updated:  \(.fields.updated // "-")",
-        "Summary:  \(.fields.summary // "-")",
+    --data-urlencode "fields=summary,status,assignee,reporter,issuetype,priority,updated,description,components,versions,fixVersions" |
+    jq -r "${JQ_SHOW}"'
+        "Key:        \(.key)",
+        "Type:       \(.fields.issuetype.name // "-")",
+        "Status:     \(.fields.status.name // "-")",
+        "Priority:   \(.fields.priority.name // "-")",
+        "Assignee:   \(.fields.assignee.displayName // "unassigned")",
+        "Reporter:   \(.fields.reporter.displayName // "-")",
+        "Updated:    \(.fields.updated // "-")",
+        "Components: \(.fields.components | show)",
+        "Affects:    \(.fields.versions | show)",
+        "Fix:        \(.fields.fixVersions | show)",
+        "Summary:    \(.fields.summary // "-")",
         "",
         (.fields.description // "(no description)")'
 }
@@ -226,6 +246,126 @@ cmd_set_description() {
   printf 'updated description of %s\n' "${key}"
 }
 
+# Map friendly names to Jira field IDs. Anything else is passed through and
+# matched against the issue's editable field IDs and display names.
+field_alias() {
+  local f
+  f="$(printf '%s' "${1}" | tr '[:upper:]' '[:lower:]')"
+  case "${f}" in
+    fix | fix-version | fix-versions | fixversion | fixversions) printf 'fixVersions' ;;
+    affects | affects-version | affects-versions | version | versions) printf 'versions' ;;
+    component | components) printf 'components' ;;
+    label | labels) printf 'labels' ;;
+    parts | parts-affected | ifs-parts-affected) printf 'customfield_12111' ;;
+    *) printf '%s' "${1}" ;;
+  esac
+}
+
+# resolve_field <editmeta-json> <field> -> field ID, or nothing if not editable
+resolve_field() {
+  local id
+  id="$(field_alias "${2}")"
+  printf '%s' "${1}" | jq -r --arg f "${id}" '
+    [.fields | to_entries[]
+      | select(.key == $f or ((.value.name // "") | ascii_downcase) == ($f | ascii_downcase))
+      | .key] | first // empty'
+}
+
+cmd_fields() {
+  local key="${1:?usage: fields <KEY> [FIELD]}" field="${2:-}"
+  local meta fid
+  meta="$(api GET "${API}/issue/${key}/editmeta")"
+  if [[ -z "${field}" ]]; then
+    printf '%s' "${meta}" | jq -r '
+      .fields | to_entries[]
+      | [.key, (.value.name // "-"),
+         (.value.schema | if .type == "array" then "array<\(.items)>" else .type end),
+         (.value.operations | join(","))] | @tsv'
+    return
+  fi
+  fid="$(resolve_field "${meta}" "${field}")"
+  [[ -n "${fid}" ]] || die "field '${field}' is not editable on ${key} (list editable fields with: ${PROG} fields ${key})"
+  printf '%s' "${meta}" | jq -r --arg f "${fid}" '
+    .fields[$f]
+    | "\($f) (\(.name)); operations: \(.operations | join(","))",
+      if .allowedValues == null then "(no fixed list of allowed values)"
+      else .allowedValues[]
+        | "  \(.name // .value)\(if .archived then " [archived]" elif .released then " [released]" else "" end)"
+      end'
+}
+
+cmd_edit() {
+  local usage="usage: edit <KEY> <FIELD> <set|add|remove|clear> [VALUE[,VALUE...]]"
+  local key="${1:?${usage}}" field="${2:?${usage}}" op="${3:?${usage}}" values="${4:-}"
+  case "${op}" in
+    set | add | remove) [[ -n "${values}" ]] || die "'${op}' needs a value; use 'clear' to empty a field" ;;
+    clear) [[ -z "${values}" ]] || die "'clear' takes no value" ;;
+    *) die "unknown operation '${op}' (expected set, add, remove, or clear)" ;;
+  esac
+
+  local meta fid kind jop
+  meta="$(api GET "${API}/issue/${key}/editmeta")"
+  fid="$(resolve_field "${meta}" "${field}")"
+  [[ -n "${fid}" ]] || die "field '${field}' is not editable on ${key} (list editable fields with: ${PROG} fields ${key})"
+  kind="$(printf '%s' "${meta}" | jq -r --arg f "${fid}" \
+    '.fields[$f].schema | if .type == "array" then "array:\(.items)" else .type end')"
+  case "${kind#array:}" in
+    version | component | option | string | user | group | priority | number | date | datetime) ;;
+    *) die "field ${fid} has unsupported type '${kind}'" ;;
+  esac
+  if [[ "${kind}" != array:* && ("${op}" == "add" || "${op}" == "remove") ]]; then
+    die "${fid} holds a single value; use 'set' or 'clear'"
+  fi
+  jop="${op}"
+  if [[ "${op}" == "clear" ]]; then
+    jop="set"
+  fi
+  printf '%s' "${meta}" | jq -e --arg f "${fid}" --arg o "${jop}" \
+    '.fields[$f].operations | index($o)' >/dev/null ||
+    die "Jira does not allow '${jop}' on ${fid} for ${key}"
+
+  # Check new values against the allowed list (if Jira gives one). Removals are
+  # not checked, so archived values can still be removed.
+  if [[ "${op}" == "set" || "${op}" == "add" ]]; then
+    local unknown
+    unknown="$(printf '%s' "${meta}" | jq -r --arg f "${fid}" --arg v "${values}" "${JQ_CSV}"'
+      .fields[$f] as $m
+      | if $m.allowedValues == null then empty else
+          ($m.allowedValues | map(.name // .value)) as $ok
+          | (if $m.schema.type == "array" then ($v | csv) else [$v] end)
+          | map(select(. as $x | $ok | any(. == $x) | not)) | join(", ")
+        end')"
+    [[ -z "${unknown}" ]] ||
+      die "not allowed for ${fid} on ${key}: ${unknown} (list allowed values with: ${PROG} fields ${key} ${field})"
+  fi
+
+  local shown
+  shown="${key} $(shell_quote "${field}") ${op}"
+  if [[ -n "${values}" ]]; then
+    shown+=" $(shell_quote "${values}")"
+  fi
+  require_yes "edit ${shown}"
+  local body
+  body="$(tmp_body)"
+  printf '%s' "${meta}" | jq --arg f "${fid}" --arg o "${op}" --arg v "${values}" "${JQ_CSV}"'
+    .fields[$f].schema as $s
+    | ($s.type == "array") as $arr
+    | (if $arr then $s.items else $s.type end) as $k
+    | def wrap:
+        if (["version", "component", "user", "group", "priority"] | any(. == $k)) then {name: .}
+        elif $k == "option" then {value: .}
+        elif $k == "number" then tonumber
+        else . end;
+    (if $o == "clear" then [] elif $arr then ($v | csv | map(wrap)) else [$v | wrap] end) as $vals
+    | {update: {($f): (
+        if $o == "clear" then [{set: (if $arr then [] else null end)}]
+        elif $o == "set" then [{set: (if $arr then $vals else $vals[0] end)}]
+        else [$vals[] | {($o): .}] end)}}' >"${body}"
+  api PUT "${API}/issue/${key}" -H 'Content-Type: application/json' --data "@${body}" >/dev/null
+  api GET "${API}/issue/${key}" -G --data-urlencode "fields=${fid}" |
+    jq -r --arg f "${fid}" --arg k "${key}" "${JQ_SHOW}"'"updated \($f) on \($k): \(.fields[$f] | show)"'
+}
+
 cmd_transition() {
   local key="${1:?usage: transition <KEY> <TRANSITION-NAME>}"
   local name="${2:?usage: transition <KEY> <TRANSITION-NAME>}"
@@ -260,18 +400,21 @@ Read:
   ${PROG} search "<JQL>" [max]           search issues (TSV: key status assignee summary)
   ${PROG} issue <KEY>                     show one issue with description
   ${PROG} comments <KEY>                  list comments on an issue
+  ${PROG} fields <KEY> [FIELD]            list editable fields, or one field's allowed values
   ${PROG} get <api-path>                  raw GET under ${API}/ (e.g. get project/ABC)
 
 Write (require --yes after user confirmation):
   ${PROG} --yes comment <KEY> <text>
   ${PROG} --yes create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]
   ${PROG} --yes set-description <KEY> <text|->   replace description ('-' reads stdin)
+  ${PROG} --yes edit <KEY> <FIELD> <set|add|remove|clear> [VALUE[,VALUE...]]
   ${PROG} --yes transition <KEY> <TRANSITION-NAME>
   ${PROG} --yes assign <KEY> <USERNAME>
 
 Config: PAT in ${CONFIG_DIR}/pat[_*] (chmod 600); optional base_url in ${CONFIG_DIR}/config
         (default ${DEFAULT_BASE_URL}).
 Create fields: JIRA_COMPONENTS, JIRA_FIX_VERSIONS, JIRA_IFS_PARTS_AFFECTED (comma-separated).
+Edit FIELD: a field ID, a display name, or an alias: fix, affects, components, labels, parts.
 EOF
 }
 
@@ -310,10 +453,12 @@ main() {
     search) cmd_search "${@}" ;;
     issue) cmd_issue "${@}" ;;
     comments) cmd_comments "${@}" ;;
+    fields) cmd_fields "${@}" ;;
     get) cmd_get "${@}" ;;
     comment) cmd_comment "${@}" ;;
     create) cmd_create "${@}" ;;
     set-description) cmd_set_description "${@}" ;;
+    edit) cmd_edit "${@}" ;;
     transition) cmd_transition "${@}" ;;
     assign) cmd_assign "${@}" ;;
     *) die "unknown command: ${cmd} (try: ${PROG} help)" ;;

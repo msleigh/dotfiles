@@ -1,6 +1,6 @@
 ---
 name: jira-broker
-description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, edit the description of, transition, or assign issues.
+description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, transition, or assign issues, or edit their description or fields such as Fix Version, Affects Version, Component, Labels, or IFS Parts Affected.
 ---
 
 # Jira Broker
@@ -38,8 +38,11 @@ Read:
 
 - `jira-broker whoami` — confirm auth and show the current user.
 - `jira-broker search "<JQL>" [max]` — search issues; output is TSV `key status assignee summary`.
-- `jira-broker issue <KEY>` — show one issue with its description.
+- `jira-broker issue <KEY>` — show one issue with its components, versions, and
+  description.
 - `jira-broker comments <KEY>` — list comments on an issue.
+- `jira-broker fields <KEY> [FIELD]` — list the fields editable on an issue (TSV
+  `id name type operations`), or, given a field, its allowed values.
 - `jira-broker get <api-path>` — raw GET under `rest/api/2/` for anything not covered (e.g. `get project/IFS`).
 
 Write (require `--yes`, only after the user confirms):
@@ -48,8 +51,22 @@ Write (require `--yes`, only after the user confirms):
 - `jira-broker --yes create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]`
 - `jira-broker --yes set-description <KEY> <text|->` — replace the description;
   `-` reads it from stdin (use a heredoc for multi-line text).
+- `jira-broker --yes edit <KEY> <FIELD> <set|add|remove|clear> [VALUE[,VALUE...]]`
+  — edit a field. `set` replaces all values, `add` and `remove` change only
+  the values given, and `clear` empties the field. Multi-value fields take a
+  comma-separated list; single-value fields take the value as-is.
 - `jira-broker --yes transition <KEY> <TRANSITION-NAME>`
 - `jira-broker --yes assign <KEY> <USERNAME>`
+
+`FIELD` may be a field ID (`fixVersions`, `customfield_12111`), a display name
+(`'Fix Version/s'`), or one of these aliases: `fix`, `affects`, `components`,
+`labels`, `parts` (IFS Parts Affected). For example:
+
+```bash
+jira-broker --yes edit IFS-1234 fix add CY51R1
+jira-broker --yes edit IFS-1234 affects set 'CY50R1,CY50R2'
+jira-broker --yes edit IFS-1234 parts remove ifs-scripts
+```
 
 Issue creation accepts comma-separated field values through
 `JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.
@@ -74,6 +91,12 @@ JIRA_IFS_PARTS_AFFECTED='Dynamics,Physics' \
   `get 'issue/<KEY>?fields=description' | jq -r .fields.description`, make the
   change, show the user the result (or a diff), and then write back the full
   text. Descriptions use Jira wiki markup, not Markdown.
+- `edit` checks the field and values against the issue's edit screen before
+  the `--yes` gate, so running it without `--yes` is a safe way to validate a
+  change. Version names are case-sensitive (IFS uses e.g. `CY50R2`); check with
+  `fields <KEY> fix`. Prefer `add`/`remove` over `set` so other values are kept.
+- A field missing from `fields <KEY>` is not on that issue's edit screen. In the
+  IFS project, for example, Affects Version/s is editable on Bugs only.
 - IFS tickets require **Component**, **Fix Version**, and **IFS Parts Affected**.
   Before proposing or creating one, determine all three values and pass them via
   `JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.
