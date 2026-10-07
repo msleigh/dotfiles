@@ -1,6 +1,6 @@
 ---
 name: jira-broker
-description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, transition, or assign issues.
+description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, edit the description of, transition, or assign issues.
 ---
 
 # Jira Broker
@@ -46,6 +46,8 @@ Write (require `--yes`, only after the user confirms):
 
 - `jira-broker --yes comment <KEY> <text>`
 - `jira-broker --yes create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]`
+- `jira-broker --yes set-description <KEY> <text|->` — replace the description;
+  `-` reads it from stdin (use a heredoc for multi-line text).
 - `jira-broker --yes transition <KEY> <TRANSITION-NAME>`
 - `jira-broker --yes assign <KEY> <USERNAME>`
 
@@ -67,6 +69,11 @@ JIRA_IFS_PARTS_AFFECTED='Dynamics,Physics' \
   Always describe the exact change to the user and get explicit approval before
   adding `--yes`. Never pass `--yes` speculatively.
 - Prefer `search` with a focused JQL over fetching many issues individually.
+- `set-description` replaces the whole description. To edit part of it, fetch
+  the current text exactly with
+  `get 'issue/<KEY>?fields=description' | jq -r .fields.description`, make the
+  change, show the user the result (or a diff), and then write back the full
+  text. Descriptions use Jira wiki markup, not Markdown.
 - IFS tickets require **Component**, **Fix Version**, and **IFS Parts Affected**.
   Before proposing or creating one, determine all three values and pass them via
   `JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.

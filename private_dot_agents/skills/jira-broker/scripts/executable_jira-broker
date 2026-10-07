@@ -211,6 +211,21 @@ cmd_create() {
   printf 'created %s: %s/browse/%s\n' "${key}" "${BASE_URL}" "${key}"
 }
 
+cmd_set_description() {
+  local key="${1:?usage: set-description <KEY> <text|->}"
+  local text="${2:?usage: set-description <KEY> <text|->}"
+  if [[ "${text}" == "-" ]]; then
+    text="$(cat)"
+  fi
+  [[ -n "${text}" ]] || die "refusing to set an empty description on ${key}"
+  require_yes "set-description ${key} <text>"
+  local body
+  body="$(tmp_body)"
+  jq -n --arg d "${text}" '{fields: {description: $d}}' >"${body}"
+  api PUT "${API}/issue/${key}" -H 'Content-Type: application/json' --data "@${body}" >/dev/null
+  printf 'updated description of %s\n' "${key}"
+}
+
 cmd_transition() {
   local key="${1:?usage: transition <KEY> <TRANSITION-NAME>}"
   local name="${2:?usage: transition <KEY> <TRANSITION-NAME>}"
@@ -250,6 +265,7 @@ Read:
 Write (require --yes after user confirmation):
   ${PROG} --yes comment <KEY> <text>
   ${PROG} --yes create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]
+  ${PROG} --yes set-description <KEY> <text|->   replace description ('-' reads stdin)
   ${PROG} --yes transition <KEY> <TRANSITION-NAME>
   ${PROG} --yes assign <KEY> <USERNAME>
 
@@ -297,6 +313,7 @@ main() {
     get) cmd_get "${@}" ;;
     comment) cmd_comment "${@}" ;;
     create) cmd_create "${@}" ;;
+    set-description) cmd_set_description "${@}" ;;
     transition) cmd_transition "${@}" ;;
     assign) cmd_assign "${@}" ;;
     *) die "unknown command: ${cmd} (try: ${PROG} help)" ;;
