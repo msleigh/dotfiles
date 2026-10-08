@@ -6,6 +6,9 @@ bin/zotread
 CLAUDE.md
 LICENSE-MIT.txt
 README.md
+# Kept in the repo but not deployed
+.agents/skills/ifs-git-tools
+.agents/skills/ifs-git-tools/**
 {{ if ne .chezmoi.os "darwin" -}}
 Library
 Library/**
