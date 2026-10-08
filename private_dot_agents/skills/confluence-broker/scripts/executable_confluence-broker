@@ -203,7 +203,8 @@ cmd_create() {
     {type: "page", title: $t, space: {key: $sp},
      body: {storage: {value: $v, representation: "storage"}}}
     + (if $par == "" then {} else {ancestors: [{id: $par}]} end)' >"${body}"
-  api POST "${API}/content" -H 'Content-Type: application/json' --data "@${body}" |
+  api POST "${API}/content" -H 'Content-Type: application/json' \
+    -H 'X-Atlassian-Token: no-check' --data "@${body}" |
     jq -r '"created \(.id): \(._links.base // "")\(._links.webui // "")"'
 }
 
@@ -223,7 +224,8 @@ cmd_update() {
   jq -n --arg t "${title}" --arg v "${content}" --arg ty "${type}" --argjson n "$((ver + 1))" '
     {type: $ty, title: $t, version: {number: $n},
      body: {storage: {value: $v, representation: "storage"}}}' >"${body}"
-  api PUT "${API}/content/${id}" -H 'Content-Type: application/json' --data "@${body}" |
+  api PUT "${API}/content/${id}" -H 'Content-Type: application/json' \
+    -H 'X-Atlassian-Token: no-check' --data "@${body}" |
     jq -r '"updated \(.id) to v\(.version.number)"'
 }
 
@@ -237,7 +239,8 @@ cmd_comment() {
   jq -n --arg c "${id}" --arg v "${text}" '
     {type: "comment", container: {id: $c, type: "page"},
      body: {storage: {value: $v, representation: "storage"}}}' >"${body}"
-  api POST "${API}/content" -H 'Content-Type: application/json' --data "@${body}" |
+  api POST "${API}/content" -H 'Content-Type: application/json' \
+    -H 'X-Atlassian-Token: no-check' --data "@${body}" |
     jq -r '"commented on \(.container.id) (comment \(.id))"'
 }
 
