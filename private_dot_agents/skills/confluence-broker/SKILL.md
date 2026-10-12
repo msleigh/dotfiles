@@ -1,6 +1,6 @@
 ---
 name: confluence-broker
-description: Read and edit ECMWF Confluence (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when Michael asks to search the ECMWF wiki/Confluence, read a page, or create, update, or comment on Confluence pages.
+description: Read and edit ECMWF Confluence (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks to search the ECMWF wiki/Confluence, read a page, or create, update, or comment on Confluence pages.
 ---
 
 # Confluence Broker
@@ -15,21 +15,22 @@ write Confluence you must then run the broker CLI via Bash (see **Invocation**).
 an agent can work with Confluence **without ever handling the credential**: the
 Personal Access Token is read from a local file at run time and passed to `curl`
 via a stdin config block, so it never appears in command arguments, `ps`, shell
-history, logs, this public repository, or anything sent to the model. Only the
-data you explicitly request is returned.
+history, logs, source control, or anything sent to the model. Only the data you
+explicitly request is returned.
 
 Page content you fetch *is* returned to the agent (that is the point of reading
 it); only the token is kept local.
 
 ## Invocation
 
-The executable is `scripts/confluence-broker` inside this skill directory
-(deployed copy: `~/.agents/skills/confluence-broker/scripts/confluence-broker`).
-Run it directly, e.g.:
+The executable is `scripts/confluence-broker` inside this skill directory. Run
+it by its full path, e.g.:
 
 ```bash
-scripts/confluence-broker whoami
+<skill-dir>/scripts/confluence-broker whoami
 ```
+
+It requires `bash`, `curl` (7.76 or later), and `jq`.
 
 ## Commands
 
@@ -64,21 +65,23 @@ Confluence **storage format** (XHTML):
   try to set the version yourself.
 - To locate a page, prefer `search` (CQL) or `find <SPACE> <TITLE>` before
   fetching by ID.
-- If a command reports "no PAT file" or "no base URL", the user needs to
-  complete the one-time setup below — do not attempt to work around it.
+- If a command reports "no PAT file", the user needs to complete the one-time
+  setup below — do not attempt to work around it.
 
 ## One-time setup (done by the user, not committed)
 
-1. Base URL (already set by dotfiles):
-   `~/.config/confluence/config` contains `base_url=https://confluence.ecmwf.int`.
-2. Personal Access Token: create one in Confluence (Profile → Settings →
+1. Personal Access Token: create one in Confluence (Profile → Settings →
    Personal Access Tokens), then save the raw token (no surrounding whitespace)
    to a local file and lock it down:
 
    ```bash
+   mkdir -p ~/.config/confluence
    printf '%s' '<token>' > ~/.config/confluence/pat_$(hostname -s)
    chmod 600 ~/.config/confluence/pat_*
    ```
 
    The broker reads `~/.config/confluence/pat` or the first `pat_*` file it
    finds, or the path in `CONFLUENCE_PAT_FILE`. Never commit these files.
+2. Base URL (optional): defaults to `https://confluence.ecmwf.int`. To use
+   another instance, set `CONFLUENCE_BASE_URL` or add `base_url=<url>` to
+   `~/.config/confluence/config`.

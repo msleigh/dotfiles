@@ -4,13 +4,14 @@
 #
 # The Personal Access Token is read from a local file at run time and handed to
 # curl through a stdin config block, so it never appears in argv, `ps` output,
-# shell history, logs, this (public) repository, or anything sent to an LLM.
+# shell history, logs, source control, or anything sent to an LLM.
 # Only the data you explicitly request is printed.
 #
 # Local config (never committed):
-#   ${XDG_CONFIG_HOME:-~/.config}/confluence/config  -> line: base_url=https://confluence.ecmwf.int
 #   ${XDG_CONFIG_HOME:-~/.config}/confluence/pat[_*] -> file containing only the PAT (chmod 600)
+#   ${XDG_CONFIG_HOME:-~/.config}/confluence/config  -> optional line: base_url=<url>
 # Overrides: CONFLUENCE_BASE_URL, CONFLUENCE_PAT_FILE.
+# Base URL defaults to https://confluence.ecmwf.int.
 #
 # Page bodies for create/update/comment are Confluence "storage format" (XHTML).
 # A body argument may be a literal string, a path to a file, or "-" for stdin.
@@ -19,6 +20,7 @@ set -euo pipefail
 
 readonly PROG="confluence-broker"
 readonly CONFIG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/confluence"
+readonly DEFAULT_BASE_URL="https://confluence.ecmwf.int"
 readonly API="rest/api"
 
 ASSUME_YES=0
@@ -78,7 +80,7 @@ resolve_base_url() {
       return
     fi
   fi
-  die "no base URL; add 'base_url=https://confluence.ecmwf.int' to ${cfg} or set CONFLUENCE_BASE_URL"
+  printf '%s' "${DEFAULT_BASE_URL}"
 }
 
 resolve_pat_file() {
@@ -102,7 +104,7 @@ resolve_pat_file() {
 }
 
 # Resolve and validate credentials once, in the top-level shell, so a missing
-# base URL or PAT aborts cleanly (die inside a nested $(...) would not).
+# PAT aborts cleanly (die inside a nested $(...) would not).
 preflight() {
   local perms
   BASE_URL="$(resolve_base_url)"
@@ -261,7 +263,8 @@ Write (require --yes after user confirmation; body = literal, file path, or -):
   ${PROG} --yes update <ID> <body|file|->
   ${PROG} --yes comment <ID> <text>
 
-Config: base_url in ${CONFIG_DIR}/config; PAT in ${CONFIG_DIR}/pat[_*] (chmod 600).
+Config: PAT in ${CONFIG_DIR}/pat[_*] (chmod 600); optional base_url in ${CONFIG_DIR}/config
+        (default ${DEFAULT_BASE_URL}).
 EOF
 }
 
