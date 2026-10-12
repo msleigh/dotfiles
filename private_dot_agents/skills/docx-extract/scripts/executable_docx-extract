@@ -1,0 +1,283 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
+"""docx-extract — print a .docx as Markdown, with its comments.
+
+The body (paragraphs, headings, lists, and tables) is printed with a marker
+such as [C3] where each comment thread is anchored. A Comments section follows,
+listing each thread with its author, date, resolved status, the text it is
+anchored to, and its replies.
+
+Tracked changes are shown as if accepted (insertions kept, deletions dropped);
+the header reports how many are pending.
+"""
+
+import argparse
+import sys
+import xml.etree.ElementTree as ET
+import zipfile
+from dataclasses import dataclass, field
+from pathlib import Path
+
+W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+W14 = "{http://schemas.microsoft.com/office/word/2010/wordml}"
+W15 = "{http://schemas.microsoft.com/office/word/2012/wordml}"
+DC = "{http://purl.org/dc/elements/1.1/}"
+DCTERMS = "{http://purl.org/dc/terms/}"
+CP = "{http://schemas.openxmlformats.org/package/2006/metadata/core-properties}"
+
+WRAPPERS = {W + "sdt", W + "sdtContent", W + "customXml", W + "smartTag"}
+
+
+@dataclass
+class Comment:
+    cid: str
+    author: str
+    date: str
+    text: str
+    para_ids: list[str]
+    parent: str | None = None
+    done: bool = False
+    anchor: list[str] = field(default_factory=list)
+    replies: list["Comment"] = field(default_factory=list)
+    label: str = ""
+
+
+def read_xml(z: zipfile.ZipFile, name: str) -> ET.Element | None:
+    try:
+        return ET.fromstring(z.read(name))
+    except KeyError:
+        return None
+
+
+def plain_text(el: ET.Element) -> str:
+    parts = []
+    for node in el.iter():
+        if node.tag == W + "t":
+            parts.append(node.text or "")
+        elif node.tag == W + "tab":
+            parts.append("\t")
+        elif node.tag in (W + "br", W + "cr"):
+            parts.append("\n")
+    return "".join(parts)
+
+
+def short_date(iso: str) -> str:
+    return iso.replace("T", " ")[:16] if iso else "?"
+
+
+def load_comments(z: zipfile.ZipFile) -> dict[str, Comment]:
+    root = read_xml(z, "word/comments.xml")
+    if root is None:
+        return {}
+    comments: dict[str, Comment] = {}
+    para_to_cid: dict[str, str] = {}
+    for c in root.findall(W + "comment"):
+        cid = c.get(W + "id", "")
+        paras = c.findall(W + "p")
+        pids = [p.get(W14 + "paraId", "") for p in paras]
+        text = "\n".join(plain_text(p) for p in paras).strip()
+        comments[cid] = Comment(
+            cid, c.get(W + "author", "?"), c.get(W + "date", ""), text, pids
+        )
+        for pid in pids:
+            if pid:
+                para_to_cid[pid] = cid
+    ext = read_xml(z, "word/commentsExtended.xml")
+    if ext is not None:
+        for ex in ext.findall(W15 + "commentEx"):
+            cid = para_to_cid.get(ex.get(W15 + "paraId", ""))
+            if cid is None:
+                continue
+            comments[cid].done = ex.get(W15 + "done") == "1"
+            parent = ex.get(W15 + "paraIdParent")
+            if parent and parent in para_to_cid:
+                comments[cid].parent = para_to_cid[parent]
+    for c in comments.values():
+        if c.parent:
+            comments[c.parent].replies.append(c)
+    return comments
+
+
+class Body:
+    def __init__(self, comments: dict[str, Comment]):
+        self.comments = comments
+        self.open: set[str] = set()
+        self.threads: list[Comment] = []
+        self.changes = 0
+
+    def marker(self, cid: str) -> str:
+        c = self.comments.get(cid)
+        if c is None or c.parent or c.label:
+            return ""
+        self.threads.append(c)
+        c.label = f"C{len(self.threads)}"
+        return f"[{c.label}]"
+
+    def para(self, p: ET.Element) -> str:
+        parts = []
+        for node in p.iter():
+            tag = node.tag
+            if tag == W + "commentRangeStart":
+                self.open.add(node.get(W + "id", ""))
+            elif tag == W + "commentRangeEnd":
+                self.open.discard(node.get(W + "id", ""))
+            elif tag == W + "commentReference":
+                parts.append(self.marker(node.get(W + "id", "")))
+            elif tag in (W + "ins", W + "del"):
+                self.changes += 1
+            elif tag in (W + "t", W + "tab", W + "br", W + "cr"):
+                text = {W + "tab": "\t", W + "br": " ", W + "cr": " "}.get(
+                    tag, node.text or ""
+                )
+                parts.append(text)
+                for cid in self.open:
+                    if cid in self.comments:
+                        self.comments[cid].anchor.append(text)
+        return "".join(parts).strip()
+
+    def para_prefix(self, p: ET.Element) -> str:
+        ppr = p.find(W + "pPr")
+        if ppr is None:
+            return ""
+        style = ppr.find(W + "pStyle")
+        val = style.get(W + "val", "") if style is not None else ""
+        if val.lower().startswith("heading") and val[7:].isdigit():
+            return "#" * min(int(val[7:]) + 1, 6) + " "
+        if val.lower() == "title":
+            return "# "
+        num = ppr.find(W + "numPr")
+        if num is not None:
+            ilvl = num.find(W + "ilvl")
+            level = int(ilvl.get(W + "val", "0")) if ilvl is not None else 0
+            return "  " * level + "- "
+        return ""
+
+    def blocks(self, parent: ET.Element):
+        for child in parent:
+            if child.tag in WRAPPERS:
+                yield from self.blocks(child)
+            elif child.tag in (W + "p", W + "tbl"):
+                yield child
+
+    def cell(self, tc: ET.Element) -> str:
+        lines = []
+        for b in self.blocks(tc):
+            if b.tag == W + "p":
+                prefix = "• " if self.para_prefix(b).strip() == "-" else ""
+                text = self.para(b)
+                if text:
+                    lines.append(prefix + text)
+            else:
+                lines.append(" / ".join(self.cell(c) for c in b.iter(W + "tc")))
+        return "<br>".join(lines).replace("|", "\\|").replace("\n", " ")
+
+    def table(self, tbl: ET.Element) -> str:
+        rows = []
+        for tr in self.blocks_of(tbl, W + "tr"):
+            rows.append([self.cell(tc) for tc in self.blocks_of(tr, W + "tc")])
+        if not rows:
+            return ""
+        width = max(len(r) for r in rows)
+        rows = [r + [""] * (width - len(r)) for r in rows]
+        out = ["| " + " | ".join(rows[0]) + " |", "|" + "---|" * width]
+        out += ["| " + " | ".join(r) + " |" for r in rows[1:]]
+        return "\n".join(out)
+
+    def blocks_of(self, parent: ET.Element, tag: str):
+        for child in parent:
+            if child.tag in WRAPPERS:
+                yield from self.blocks_of(child, tag)
+            elif child.tag == tag:
+                yield child
+
+    def render(self, body: ET.Element) -> str:
+        out = []
+        for b in self.blocks(body):
+            if b.tag == W + "tbl":
+                out.append(self.table(b))
+            else:
+                text = self.para(b)
+                if text:
+                    out.append(self.para_prefix(b) + text)
+        return "\n\n".join(x for x in out if x)
+
+
+def render_comments(threads: list[Comment], orphans: list[Comment]) -> str:
+    blocks = []
+    for c in threads + orphans:
+        state = "resolved" if c.done else "open"
+        parts = [f"### {c.label or 'C?'} — {c.author}, {short_date(c.date)} ({state})"]
+        anchor = " ".join("".join(c.anchor).split())
+        if anchor:
+            if len(anchor) > 400:
+                anchor = anchor[:400] + "…"
+            parts.append(f"> {anchor}")
+        parts.append(c.text or "(empty)")
+        replies = [
+            f"- **Reply** — {r.author}, {short_date(r.date)}: {' '.join(r.text.split())}"
+            for r in sorted(c.replies, key=lambda x: x.date)
+        ]
+        if replies:
+            parts.append("\n".join(replies))
+        blocks.append("\n\n".join(parts))
+    return "\n\n".join(blocks)
+
+
+def extract(path: Path, body_only: bool = False) -> str:
+    with zipfile.ZipFile(path) as z:
+        comments = load_comments(z)
+        doc = read_xml(z, "word/document.xml")
+        core = read_xml(z, "docProps/core.xml")
+    if doc is None:
+        raise SystemExit(f"docx-extract: no word/document.xml in {path}")
+    body = Body({} if body_only else comments)
+    text = body.render(doc.find(W + "body"))
+    orphans = [c for c in comments.values() if not c.parent and not c.label]
+    for c in orphans:
+        c.label = "C?"
+    top = body.threads + orphans
+    resolved = sum(1 for c in top if c.done)
+
+    head = [f"# {path.name}", ""]
+    if core is not None:
+        modified = core.findtext(DCTERMS + "modified") or "?"
+        by = core.findtext(CP + "lastModifiedBy") or "?"
+        head.append(f"- Document last modified: {short_date(modified)} by {by}")
+    if body_only:
+        head.append(f"- Comments: {len(comments)} (omitted)")
+    else:
+        head.append(
+            f"- Comments: {len(comments)} in {len(top)} threads "
+            f"({len(top) - resolved} open, {resolved} resolved)"
+        )
+    head.append(f"- Pending tracked changes: {body.changes} (shown as accepted)")
+    parts = ["\n".join(head), text]
+    if top and not body_only:
+        parts.append("## Comments\n\n" + render_comments(body.threads, orphans))
+    return "\n\n".join(parts) + "\n"
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("docx", type=Path)
+    ap.add_argument(
+        "-o", "--output", type=Path, help="write to this file instead of stdout"
+    )
+    ap.add_argument(
+        "--body-only",
+        action="store_true",
+        help="omit comments and their markers (e.g. for a committed extract)",
+    )
+    args = ap.parse_args()
+    result = extract(args.docx, args.body_only)
+    if args.output:
+        args.output.write_text(result, encoding="utf-8")
+    else:
+        sys.stdout.write(result)
+
+
+if __name__ == "__main__":
+    main()
