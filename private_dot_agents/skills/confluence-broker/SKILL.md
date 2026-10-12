@@ -65,23 +65,34 @@ Confluence **storage format** (XHTML):
   try to set the version yourself.
 - To locate a page, prefer `search` (CQL) or `find <SPACE> <TITLE>` before
   fetching by ID.
-- If a command reports "no PAT file", the user needs to complete the one-time
-  setup below — do not attempt to work around it.
+- If a command reports "no PAT file" or "token not accepted", or a request
+  fails with `401 Unauthorized`, the user needs to complete (or redo) the
+  one-time setup below — the token is missing, wrong, or expired. Do not
+  attempt to work around it, and never ask the user to paste the token into the
+  conversation.
+- Confluence does not reject a bad token: it answers as an anonymous user, so
+  reads may succeed but return only public content. If results look
+  unexpectedly sparse, run `whoami` first.
 
 ## One-time setup (done by the user, not committed)
 
-1. Personal Access Token: create one in Confluence (Profile → Settings →
-   Personal Access Tokens), then save the raw token (no surrounding whitespace)
-   to a local file and lock it down:
+1. Create a Personal Access Token in Confluence: click your avatar (top right)
+   → **Settings** → **Personal Access Tokens** → **Create token**. Give it a
+   name and an expiry date, click **Create**, and copy the token straight away
+   — it is shown only once.
+2. Save it. This prompts for the token without echoing it or recording it in
+   shell history, and creates the file readable only by you (works in bash and
+   zsh):
 
    ```bash
    mkdir -p ~/.config/confluence
-   printf '%s' '<token>' > ~/.config/confluence/pat_$(hostname -s)
-   chmod 600 ~/.config/confluence/pat_*
+   (umask 077; printf 'Paste Confluence token: '; read -rs t; printf '%s' "${t}" > ~/.config/confluence/pat); echo
    ```
 
    The broker reads `~/.config/confluence/pat` or the first `pat_*` file it
    finds, or the path in `CONFLUENCE_PAT_FILE`. Never commit these files.
-2. Base URL (optional): defaults to `https://confluence.ecmwf.int`. To use
+3. Check it: `<skill-dir>/scripts/confluence-broker whoami` should print your
+   name. When the token expires, create a new one and repeat step 2.
+4. Base URL (optional): defaults to `https://confluence.ecmwf.int`. To use
    another instance, set `CONFLUENCE_BASE_URL` or add `base_url=<url>` to
    `~/.config/confluence/config`.

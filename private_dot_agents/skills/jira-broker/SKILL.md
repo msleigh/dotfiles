@@ -102,23 +102,30 @@ JIRA_IFS_PARTS_AFFECTED='Dynamics,Physics' \
   `JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.
 - For fields or endpoints the wrapper does not expose, use `get <api-path>` and
   parse the JSON.
-- If a command reports "no PAT file", the user needs to complete the one-time
-  setup below — do not attempt to work around it.
+- If a command reports "no PAT file", or a request fails with `401
+  Unauthorized`, the user needs to complete (or redo) the one-time setup below
+  — the token is missing, wrong, or expired. Do not attempt to work around it,
+  and never ask the user to paste the token into the conversation.
 
 ## One-time setup (done by the user, not committed)
 
-1. Personal Access Token: create one in Jira (Profile → Personal Access Tokens),
-   then save the raw token (no surrounding whitespace) to a local file and lock
-   it down:
+1. Create a Personal Access Token in Jira: click your avatar (top right) →
+   **Profile** → **Personal Access Tokens** → **Create token**. Give it a name
+   and an expiry date, click **Create**, and copy the token straight away — it
+   is shown only once.
+2. Save it. This prompts for the token without echoing it or recording it in
+   shell history, and creates the file readable only by you (works in bash and
+   zsh):
 
    ```bash
    mkdir -p ~/.config/jira
-   printf '%s' '<token>' > ~/.config/jira/pat_$(hostname -s)
-   chmod 600 ~/.config/jira/pat_*
+   (umask 077; printf 'Paste Jira token: '; read -rs t; printf '%s' "${t}" > ~/.config/jira/pat); echo
    ```
 
    The broker reads `~/.config/jira/pat` or the first `pat_*` file it finds, or
    the path in `JIRA_PAT_FILE`. Never commit these files.
-2. Base URL (optional): defaults to `https://jira.ecmwf.int`. To use another
+3. Check it: `<skill-dir>/scripts/jira-broker whoami` should print your name.
+   When the token expires, create a new one and repeat step 2.
+4. Base URL (optional): defaults to `https://jira.ecmwf.int`. To use another
    instance, set `JIRA_BASE_URL` or add `base_url=<url>` to
    `~/.config/jira/config`.

@@ -144,8 +144,15 @@ require_yes() {
   fi
 }
 
+# Confluence answers a missing, wrong, or expired token as an anonymous user
+# rather than with 401, so treat "anonymous" as an authentication failure.
 cmd_whoami() {
-  api GET "${API}/user/current" | jq -r '"\(.displayName) (\(.username // .userKey // "?"))"'
+  local me
+  me="$(api GET "${API}/user/current")"
+  if [[ "$(printf '%s' "${me}" | jq -r '.type')" == "anonymous" ]]; then
+    die "token not accepted (Confluence treated the request as anonymous); the PAT in ${PAT_FILE} is wrong or expired"
+  fi
+  printf '%s' "${me}" | jq -r '"\(.displayName) (\(.username // .userKey // "?"))"'
 }
 
 cmd_search() {
