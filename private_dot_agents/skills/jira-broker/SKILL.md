@@ -60,12 +60,14 @@ Write (require `--yes`, only after the user confirms):
 
 `FIELD` may be a field ID (`fixVersions`, `customfield_12111`), a display name
 (`'Fix Version/s'`), or one of these aliases: `fix`, `affects`, `components`,
-`labels`, `parts` (IFS Parts Affected). For example:
+`labels`, `parts` (IFS Parts Affected), `epic` (Epic Link: `set` takes the
+epic's key, `clear` removes the issue from its epic). For example:
 
 ```bash
 jira-broker --yes edit IFS-1234 fix add CY51R1
 jira-broker --yes edit IFS-1234 affects set 'CY50R1,CY50R2'
 jira-broker --yes edit IFS-1234 parts remove ifs-scripts
+jira-broker --yes edit FORGE-123 epic set FORGE-45
 ```
 
 Issue creation accepts comma-separated field values through
@@ -77,6 +79,14 @@ JIRA_COMPONENTS='Forecast' \
 JIRA_FIX_VERSIONS='Cy50r1' \
 JIRA_IFS_PARTS_AFFECTED='Dynamics,Physics' \
   jira-broker --yes create IFS Task 'Summary' 'Description'
+```
+
+Epics also need an Epic Name. It defaults to the summary; set
+`JIRA_EPIC_NAME` to use a shorter name:
+
+```bash
+JIRA_EPIC_NAME='Code pruning' \
+  jira-broker --yes create FORGE Epic 'Code pruning: workflow code' 'Description'
 ```
 
 ## Agent guidance

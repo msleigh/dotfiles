@@ -213,19 +213,36 @@ cmd_create() {
     [[ -n "${JIRA_FIX_VERSIONS:-}" ]] || die "creating IFS tickets requires JIRA_FIX_VERSIONS"
     [[ -n "${JIRA_IFS_PARTS_AFFECTED:-}" ]] || die "creating IFS tickets requires JIRA_IFS_PARTS_AFFECTED"
   fi
-  require_yes "create ${type} in ${proj}: ${summary}"
+  # Epics need an Epic Name (a custom field whose ID varies by instance);
+  # default it to the summary.
+  local epic_name="" epic_field=""
+  if [[ "$(printf '%s' "${type}" | tr '[:upper:]' '[:lower:]')" == "epic" ]]; then
+    epic_name="${JIRA_EPIC_NAME:-${summary}}"
+    epic_field="$(api GET "${API}/field" |
+      jq -r '[.[] | select(.custom and .name == "Epic Name") | .id] | first // empty')"
+    [[ -n "${epic_field}" ]] || die "cannot find the 'Epic Name' field on ${BASE_URL}"
+  elif [[ -n "${JIRA_EPIC_NAME:-}" ]]; then
+    die "JIRA_EPIC_NAME applies only to issues of type Epic"
+  fi
+  local shown="create ${type} in ${proj}: ${summary}"
+  if [[ -n "${epic_name}" ]]; then
+    shown+=" (Epic Name: ${epic_name})"
+  fi
+  require_yes "${shown}"
   local body out key
   body="$(tmp_body)"
   jq -n --arg p "${proj}" --arg t "${type}" --arg s "${summary}" --arg d "${desc}" \
     --arg comps "${JIRA_COMPONENTS:-}" --arg vers "${JIRA_FIX_VERSIONS:-}" \
-    --arg parts "${JIRA_IFS_PARTS_AFFECTED:-}" '
+    --arg parts "${JIRA_IFS_PARTS_AFFECTED:-}" \
+    --arg ef "${epic_field}" --arg en "${epic_name}" '
     def csv2objs($s): ($s | split(",") | map(gsub("^ +| +$";"")) | map(select(length>0) | {name: .}));
     def csv2values($s): ($s | split(",") | map(gsub("^ +| +$";"")) | map(select(length>0) | {value: .}));
     {fields: ({project: {key: $p}, issuetype: {name: $t}, summary: $s}
       + (if $d == "" then {} else {description: $d} end)
       + (if $comps == "" then {} else {components: csv2objs($comps)} end)
       + (if $vers == "" then {} else {fixVersions: csv2objs($vers)} end)
-      + (if $parts == "" then {} else {customfield_12111: csv2values($parts)} end))}' >"${body}"
+      + (if $parts == "" then {} else {customfield_12111: csv2values($parts)} end)
+      + (if $ef == "" then {} else {($ef): $en} end))}' >"${body}"
   out="$(api POST "${API}/issue" -H 'Content-Type: application/json' --data "@${body}")"
   key="$(printf '%s' "${out}" | jq -r '.key')"
   printf 'created %s: %s/browse/%s\n' "${key}" "${BASE_URL}" "${key}"
@@ -257,6 +274,7 @@ field_alias() {
     component | components) printf 'components' ;;
     label | labels) printf 'labels' ;;
     parts | parts-affected | ifs-parts-affected) printf 'customfield_12111' ;;
+    epic | epic-link) printf 'Epic Link' ;;
     *) printf '%s' "${1}" ;;
   esac
 }
@@ -307,8 +325,12 @@ cmd_edit() {
   meta="$(api GET "${API}/issue/${key}/editmeta")"
   fid="$(resolve_field "${meta}" "${field}")"
   [[ -n "${fid}" ]] || die "field '${field}' is not editable on ${key} (list editable fields with: ${PROG} fields ${key})"
-  kind="$(printf '%s' "${meta}" | jq -r --arg f "${fid}" \
-    '.fields[$f].schema | if .type == "array" then "array:\(.items)" else .type end')"
+  # Epic Link has schema type 'any' but takes an issue key as a plain string.
+  kind="$(printf '%s' "${meta}" | jq -r --arg f "${fid}" '
+    .fields[$f].schema
+    | if .custom == "com.pyxis.greenhopper.jira:gh-epic-link" then "string"
+      elif .type == "array" then "array:\(.items)"
+      else .type end')"
   case "${kind#array:}" in
     version | component | option | string | user | group | priority | number | date | datetime) ;;
     *) die "field ${fid} has unsupported type '${kind}'" ;;
@@ -413,8 +435,9 @@ Write (require --yes after user confirmation):
 
 Config: PAT in ${CONFIG_DIR}/pat[_*] (chmod 600); optional base_url in ${CONFIG_DIR}/config
         (default ${DEFAULT_BASE_URL}).
-Create fields: JIRA_COMPONENTS, JIRA_FIX_VERSIONS, JIRA_IFS_PARTS_AFFECTED (comma-separated).
-Edit FIELD: a field ID, a display name, or an alias: fix, affects, components, labels, parts.
+Create fields: JIRA_COMPONENTS, JIRA_FIX_VERSIONS, JIRA_IFS_PARTS_AFFECTED (comma-separated);
+        JIRA_EPIC_NAME (Epics only; defaults to the summary).
+Edit FIELD: a field ID, a display name, or an alias: fix, affects, components, labels, parts, epic.
 EOF
 }
 
