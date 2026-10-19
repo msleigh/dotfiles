@@ -33,6 +33,11 @@
 
 - Don't use "invite" as a noun, it's a verb; use "invitation".
 
+# Speech to Text
+
+- We use Handy STT for dictation and transcribing live audio.
+- Handy STT captures microphone input only, not application audio.
+
 # Code
 
 ## General
