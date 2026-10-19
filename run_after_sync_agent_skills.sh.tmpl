@@ -2,17 +2,15 @@
 
 set -euo pipefail
 
-# run_onchange_: chezmoi re-runs this only when its rendered content changes.
-# The hashes below fold every managed skill into that content, so adding,
-# removing, or editing a skill re-triggers the sync (chezmoi apply is otherwise
-# a no-op for skills). Machine-independent: keyed on skill name + SKILL.md hash.
-{{ range (glob (joinPath .chezmoi.sourceDir "private_dot_agents" "skills" "*" "SKILL.md")) -}}
-# skill: {{ dir . | base }} {{ include . | sha256sum }}
-{{ end -}}
-
 readonly HOME_DIR="{{ .chezmoi.destDir }}"
 readonly SOURCE_DIR="${HOME_DIR}/.agents/skills"
+readonly EXTERNAL_SOURCE_DIR="${HOME_DIR}/.local/share/agent-skills"
+readonly SOURCE_DIRS=(
+  "${SOURCE_DIR}"
+  "${EXTERNAL_SOURCE_DIR}"
+)
 readonly TARGET_DIRS=(
+  "${HOME_DIR}/.agents/skills"
   "${HOME_DIR}/.claude/skills"
   "${HOME_DIR}/.codex/skills"
   "${HOME_DIR}/.config/agents/skills"
@@ -40,6 +38,7 @@ real_dir() {
 link_skill() {
   local source="${1}"
   local target_dir="${2}"
+  local source_root_real="${3}"
   local skill_name
   local target
 
@@ -49,15 +48,18 @@ link_skill() {
   # Never operate on a target directory that resolves to the source directory
   # itself (e.g. a legacy ~/.claude/skills -> ~/.agents/skills symlink). Doing
   # so would make the script delete and self-link its own source skills.
-  if [[ -d "${target_dir}" && "$(real_dir "${target_dir}")" == "${SOURCE_REAL}" ]]; then
-    warn "${target_dir} resolves to the skills source; skipping to avoid clobbering it."
+  if [[ -d "${target_dir}" && "$(real_dir "${target_dir}")" == "${source_root_real}" ]]; then
     return
   fi
 
   mkdir -p "${target_dir}"
 
   if [[ -L "${target}" ]]; then
-    ln -sfn "${source}" "${target}"
+    if [[ "$(real_dir "${target}")" == "$(real_dir "${source}")" ]]; then
+      ln -sfn "${source}" "${target}"
+    else
+      warn "${target} links to another skill source; leaving it alone."
+    fi
     return
   fi
 
@@ -65,7 +67,7 @@ link_skill() {
     # Guard against target and source being the same real path before any
     # destructive rm; only replace a genuinely separate, identical copy.
     if [[ -d "${target}" ]] &&
-      [[ "$(real_dir "${target}")" != "${SOURCE_REAL}" ]] &&
+      [[ "$(real_dir "${target}")" != "${source_root_real}" ]] &&
       same_tree "${source}" "${target}"; then
       rm -rf "${target}"
       ln -s "${source}" "${target}"
@@ -79,24 +81,23 @@ link_skill() {
 }
 
 main() {
+  local source_dir
+  local source_real
   local skill_dir
   local target_dir
 
-  if [[ ! -d "${SOURCE_DIR}" ]]; then
-    return
-  fi
-
-  # Resolved source path, used by link_skill to refuse to clobber the source.
-  SOURCE_REAL="$(real_dir "${SOURCE_DIR}")"
-  readonly SOURCE_REAL
-
   shopt -s nullglob
-  for skill_dir in "${SOURCE_DIR}"/*; do
-    [[ -d "${skill_dir}" ]] || continue
-    [[ -f "${skill_dir}/SKILL.md" ]] || continue
+  for source_dir in "${SOURCE_DIRS[@]}"; do
+    [[ -d "${source_dir}" ]] || continue
+    source_real="$(real_dir "${source_dir}")"
 
-    for target_dir in "${TARGET_DIRS[@]}"; do
-      link_skill "${skill_dir}" "${target_dir}"
+    for skill_dir in "${source_dir}"/*; do
+      [[ -d "${skill_dir}" ]] || continue
+      [[ -f "${skill_dir}/SKILL.md" ]] || continue
+
+      for target_dir in "${TARGET_DIRS[@]}"; do
+        link_skill "${skill_dir}" "${target_dir}" "${source_real}"
+      done
     done
   done
 }

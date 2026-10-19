@@ -73,10 +73,12 @@ Six files vary per machine and use Go template syntax:
 ### Agent skills
 
 Personal agent skills live under `private_dot_agents/skills`, which deploys to
-`~/.agents/skills`. Add future skills there as one directory per skill, each
-with a `SKILL.md`.
+`~/.agents/skills`. Add future public skills there as one directory per skill,
+each with a `SKILL.md`. Skills maintained in separate private repositories may
+install under `~/.local/share/agent-skills`; the sync hook discovers them without
+putting their contents in this repository.
 
-`run_after_sync_agent_skills.sh.tmpl` links every deployed skill into the
+`run_after_sync_agent_skills.sh.tmpl` links every deployed or external skill into the
 harness-specific compatibility directories used by Claude Code, legacy Codex,
 OpenCode, and goose. The script leaves differing local directories alone
 instead of overwriting them.
