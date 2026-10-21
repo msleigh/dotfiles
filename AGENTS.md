@@ -59,7 +59,7 @@ This file is never committed. chezmoi reads `.machine` from it when rendering te
 
 ### Templated files
 
-Six files vary per machine and use Go template syntax:
+Seven files vary per machine and use Go template syntax:
 
 | Source file | Deployed as | Varies by machine |
 |---|---|---|
@@ -69,6 +69,7 @@ Six files vary per machine and use Go template syntax:
 | `dot_gitconfig.tmpl` | `~/.gitconfig` | `[include]` for ifs-git-tools (work, atos) |
 | `executable_brew.sh.tmpl` | `~/brew.sh` | package list varies per machine; macOS installs Quarto with Homebrew |
 | `executable_quarto.sh.tmpl` | `~/quarto.sh` | installs the latest Linux x86_64 Quarto tarball on atos without sudo |
+| `private_dot_config/private_opencode/opencode.jsonc.tmpl` | `~/.config/opencode/opencode.jsonc` | default model (work: GitHub Copilot/Claude Opus 5.5, home: OpenAI/GPT Sol); ECMWF Bluster provider on work/atos only |
 
 ### Agent skills
 
@@ -110,6 +111,11 @@ instead of overwriting them.
 | `dot_tmux.conf` | Prefix=Ctrl-A, vi mode, TPM plugins (sensible, resurrect) |
 | `dot_macos` | macOS `defaults write` settings — most lines commented out for safety |
 | `dot_exports.tmpl` | Sets `EDITOR=vim`, locale (en_GB.UTF-8), history size (32K), Homebrew no-analytics |
+| `private_dot_config/private_opencode/opencode.jsonc.tmpl` | OpenCode global config; per-machine default model, Bluster provider on work machines |
+
+OpenCode provider API keys (including ECMWF Bluster) are stored by
+`opencode auth login` in `~/.local/share/opencode/auth.json`, which is
+machine-local and never committed to this repository.
 
 ### Vim templates
 
