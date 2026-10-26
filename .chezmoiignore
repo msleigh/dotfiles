@@ -1,5 +1,4 @@
 AGENTS.md
-.gitignore
 .pre-commit-config.yaml
 bin/subl
 bin/zotread

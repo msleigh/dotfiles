@@ -4,7 +4,10 @@
 
 - Always use version control, even for small projects, non-code projects, etc.
 - Always use Git for version control.
-- Use Git worktrees.
+- Use Git worktrees in a `.worktrees/` directory inside the repository
+  (gitignored), e.g. `.worktrees/<branch>`. Never create worktrees outside
+  the repository, such as in ~/projects. Tool-managed worktrees (e.g. `git
+  ifsbranch` for IFS repositories) follow their own location rules.
 - Don't use `git add -A`
 
 ## Config

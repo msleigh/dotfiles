@@ -19,3 +19,6 @@ slurm-[0-9]*.out
 # Claude Code
 .claude/
 .vim/bundle/
+
+# Git worktrees (kept inside each repository)
+.worktrees/
