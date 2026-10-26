@@ -198,3 +198,9 @@ function ds() {
     free_storage_mb="$(echo "scale=2; $free_storage / 1024 / 1024" | bc )"
     echo "${free_storage_mb} GB"
 }
+
+# Render a Markdown file (or stdin) with rich and paginate it with less.
+# Runs in an ephemeral uv environment, so no system packages are needed.
+function mdcat() {
+    FORCE_COLOR=1 uv run --with rich python -m rich.markdown -w "$(tput cols)" "${1:--}" | less -R
+}
