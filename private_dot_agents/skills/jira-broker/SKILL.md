@@ -68,7 +68,15 @@ jira-broker --yes edit IFS-1234 fix add CY51R1
 jira-broker --yes edit IFS-1234 affects set 'CY50R1,CY50R2'
 jira-broker --yes edit IFS-1234 parts remove ifs-scripts
 jira-broker --yes edit FORGE-123 epic set FORGE-45
+jira-broker --yes edit FORGE-123 issuetype set Epic
 ```
+
+Issue-type changes use the names listed by `fields <KEY> issuetype`. Jira may
+require additional fields or a move workflow for some conversions; an allowed
+type alone does not guarantee the conversion will succeed.
+If no edit operation is advertised for `issuetype`, try Jira's **Move** action
+in the web interface. The broker stops locally in this case; it has not sent
+an update or received a rejection of the conversion from Jira.
 
 Issue creation accepts comma-separated field values through
 `JIRA_COMPONENTS`, `JIRA_FIX_VERSIONS`, and `JIRA_IFS_PARTS_AFFECTED`.

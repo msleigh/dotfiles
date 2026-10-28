@@ -305,7 +305,7 @@ cmd_fields() {
   [[ -n "${fid}" ]] || die "field '${field}' is not editable on ${key} (list editable fields with: ${PROG} fields ${key})"
   printf '%s' "${meta}" | jq -r --arg f "${fid}" '
     .fields[$f]
-    | "\($f) (\(.name)); operations: \(.operations | join(","))",
+    | "\($f) (\(.name)); operations: \((.operations // []) | if length == 0 then "(none advertised)" else join(",") end)",
       if .allowedValues == null then "(no fixed list of allowed values)"
       else .allowedValues[]
         | "  \(.name // .value)\(if .archived then " [archived]" elif .released then " [released]" else "" end)"
@@ -332,7 +332,7 @@ cmd_edit() {
       elif .type == "array" then "array:\(.items)"
       else .type end')"
   case "${kind#array:}" in
-    version | component | option | string | user | group | priority | number | date | datetime) ;;
+    version | component | option | string | user | group | priority | issuetype | number | date | datetime) ;;
     *) die "field ${fid} has unsupported type '${kind}'" ;;
   esac
   if [[ "${kind}" != array:* && ("${op}" == "add" || "${op}" == "remove") ]]; then
@@ -342,9 +342,14 @@ cmd_edit() {
   if [[ "${op}" == "clear" ]]; then
     jop="set"
   fi
-  printf '%s' "${meta}" | jq -e --arg f "${fid}" --arg o "${jop}" \
-    '.fields[$f].operations | index($o)' >/dev/null ||
-    die "Jira does not allow '${jop}' on ${fid} for ${key}"
+  if ! printf '%s' "${meta}" | jq -e --arg f "${fid}" --arg o "${jop}" \
+    '(.fields[$f].operations // []) | index($o)' >/dev/null; then
+    local hint=""
+    if [[ "${fid}" == "issuetype" ]]; then
+      hint=" Try Jira's Move action in the web interface to change the issue type."
+    fi
+    die "Jira's edit metadata does not advertise '${jop}' on ${fid} for ${key}; no update was sent.${hint}"
+  fi
 
   # Check new values against the allowed list (if Jira gives one). Removals are
   # not checked, so archived values can still be removed.
@@ -374,7 +379,7 @@ cmd_edit() {
     | ($s.type == "array") as $arr
     | (if $arr then $s.items else $s.type end) as $k
     | def wrap:
-        if (["version", "component", "user", "group", "priority"] | any(. == $k)) then {name: .}
+        if (["version", "component", "user", "group", "priority", "issuetype"] | any(. == $k)) then {name: .}
         elif $k == "option" then {value: .}
         elif $k == "number" then tonumber
         else . end;
