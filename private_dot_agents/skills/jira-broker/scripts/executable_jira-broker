@@ -203,6 +203,21 @@ cmd_comment() {
     jq -r '"commented on '"${key}"' (comment \(.id))"'
 }
 
+cmd_attach() {
+  [[ "${#}" -eq 2 ]] || die "usage: attach <KEY> <file>"
+  local key="${1}" file="${2}" form_path
+  [[ -f "${file}" && -r "${file}" ]] || die "attachment is not a readable regular file: ${file}"
+  require_yes "attach $(shell_quote "${key}") $(shell_quote "${file}")"
+
+  # Quote curl's form filename syntax too: commas and semicolons in paths must
+  # remain literal, rather than selecting more files or setting form options.
+  [[ "${file}" == /* ]] || file="${PWD}/${file}"
+  form_path="${file//\\/\\\\}"
+  form_path="${form_path//\"/\\\"}"
+  api POST "${API}/issue/${key}/attachments" --form "file=@\"${form_path}\"" |
+    jq -r --arg k "${key}" '.[] | "attached \(.filename) to \($k) (attachment \(.id)): \(.content)"'
+}
+
 cmd_create() {
   local proj="${1:?usage: create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]}"
   local type="${2:?usage: create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]}"
@@ -432,6 +447,7 @@ Read:
 
 Write (require --yes after user confirmation):
   ${PROG} --yes comment <KEY> <text>
+  ${PROG} --yes attach <KEY> <file>        upload a file attachment (including Markdown)
   ${PROG} --yes create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]
   ${PROG} --yes set-description <KEY> <text|->   replace description ('-' reads stdin)
   ${PROG} --yes edit <KEY> <FIELD> <set|add|remove|clear> [VALUE[,VALUE...]]
@@ -484,6 +500,7 @@ main() {
     fields) cmd_fields "${@}" ;;
     get) cmd_get "${@}" ;;
     comment) cmd_comment "${@}" ;;
+    attach) cmd_attach "${@}" ;;
     create) cmd_create "${@}" ;;
     set-description) cmd_set_description "${@}" ;;
     edit) cmd_edit "${@}" ;;

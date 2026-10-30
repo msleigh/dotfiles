@@ -4,3 +4,6 @@ dot_vim/backups/
 dot_vim/undo/
 .claude/
 .worktrees/
+__pycache__/
+.pytest_cache/
+.ruff_cache/

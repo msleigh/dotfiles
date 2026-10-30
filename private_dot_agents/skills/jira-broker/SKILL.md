@@ -1,6 +1,6 @@
 ---
 name: jira-broker
-description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, transition, or assign issues, or edit their description or fields such as Fix Version, Affects Version, Component, Labels, or IFS Parts Affected.
+description: Query and update ECMWF Jira (Data Center) through a local broker CLI whose Personal Access Token stays on the machine and is never sent to the model. Use when the user asks about Jira issues or tickets (e.g. IFS-1234), wants a JQL search, or wants to read, comment on, create, transition, or assign issues, upload file attachments, or edit their description or fields such as Fix Version, Affects Version, Component, Labels, or IFS Parts Affected.
 ---
 
 # Jira Broker
@@ -48,6 +48,9 @@ Read:
 Write (require `--yes`, only after the user confirms):
 
 - `jira-broker --yes comment <KEY> <text>`
+- `jira-broker --yes attach <KEY> <file>` — upload one readable local file as an
+  attachment; prints its filename, attachment ID, and download URL. Markdown
+  (`.md`) files are uploaded unchanged as downloadable attachments.
 - `jira-broker --yes create <PROJECT> <TYPE> <SUMMARY> [DESCRIPTION]`
 - `jira-broker --yes set-description <KEY> <text|->` — replace the description;
   `-` reads it from stdin (use a heredoc for multi-line text).
@@ -103,6 +106,9 @@ JIRA_EPIC_NAME='Code pruning' \
 - **Writes are gated.** Every write command refuses to run without `--yes`.
   Always describe the exact change to the user and get explicit approval before
   adding `--yes`. Never pass `--yes` speculatively.
+- For attachments, confirm the ticket and local file path before uploading.
+  Use `attach` for file uploads; descriptions and comments use Jira wiki markup,
+  so attaching Markdown does not render it as the issue description.
 - Prefer `search` with a focused JQL over fetching many issues individually.
 - `set-description` replaces the whole description. To edit part of it, fetch
   the current text exactly with
